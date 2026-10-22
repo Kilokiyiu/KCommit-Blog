@@ -3,8 +3,8 @@
   "private": false,
   "version": "1.0.0",
   "type": "module",
-  "description": "Astro personal blog theme with posts, projects, friends zodiac map, and optional remote API.",
-  "license": "MIT",
+  "description": "Astro static blog theme for Cloudflare Pages. Markdown + site.ts; customize copy and images before shipping.",
+  "license": "SEE LICENSE IN LICENSE",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",

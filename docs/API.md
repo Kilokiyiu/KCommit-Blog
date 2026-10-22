@@ -1,14 +1,17 @@
-# 预留内容接口
+# 🔌 内容 API 契约（C# 后端用）
 
-当前站点默认是**纯静态**：数据来自 `src/content/**`（含 posts / projects / notes 等）与 `src/site.ts`（站点配置）。
+> **当前**：Cloudflare Pages 静态站，不依赖本文 REST。  
+> **顺序**：先完成静态**管理页**与**评论**，再在本仓库用 **C# / ASP.NET Core** 实现下列接口。  
+> 日常改内容见 [CONTENT.md](./CONTENT.md)；计划见 [ROADMAP.md](./ROADMAP.md)；改前端见 [DEVELOPMENT.md](./DEVELOPMENT.md)。
 
-代码里已通过 `src/lib/api` 统一取数。以后若做前后端分离，后端按下面契约实现，前端只需设置：
+默认**纯静态**：数据来自 `src/content/**` 与 `src/site.ts`。页面统一走 `src/lib/api`。  
+后端就绪后，实现下列契约并设置：
 
 ```bash
 PUBLIC_API_BASE_URL=https://your-api.example.com
 ```
 
-即可切换到远程数据（构建时请求这些接口生成页面）。
+构建 / 运行时会改为请求远程（生成页面时 fetch），无需重写 Astro 页面。
 
 ## 端点
 
@@ -81,3 +84,11 @@ PUBLIC_API_BASE_URL=https://your-api.example.com
 | `src/lib/api/types.ts` | 类型契约 |
 
 后台管理、鉴权、评论等不在本契约内；需要时另开接口，不要破坏上述只读内容 API。
+
+## 后端实现提示（C#）
+
+- 推荐：在本仓库新增 **ASP.NET Core** Web API 工程（如 `backend/`），与 Astro 前端同仓维护
+- 部署可与 Cloudflare Pages 分开（API 另主机 / 容器），但代码仍在本仓库
+- 按上表实现 GET 接口，JSON 字段与 `src/lib/api/types.ts` 对齐即可
+- 配好 CORS（若浏览器直连）或仅供构建机访问
+- 前端 `.env` 设置 `PUBLIC_API_BASE_URL` 指向该 API 根地址
