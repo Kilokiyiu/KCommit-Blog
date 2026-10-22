@@ -1,0 +1,30 @@
+---
+import { formatDate, readingMinutes } from '../lib/format';
+
+interface Props {
+  href: string;
+  title: string;
+  description: string;
+  date: Date | string;
+  markdown?: string;
+  more?: string;
+  cover?: string;
+}
+
+const { href, title, description, date, markdown = '', more = '看看写了啥', cover } = Astro.props;
+const minutes = readingMinutes(markdown);
+const iso = typeof date === 'string' ? date : date.toISOString();
+---
+
+<a class:list={['post-card', cover && 'has-image']} href={href} style={cover ? `--card-image: url('${cover}')` : undefined}>
+  {cover && <span class="post-card-media" aria-hidden="true"></span>}
+  <div class="post-card-body">
+    <div class="post-card-meta">
+      <time datetime={iso}>{formatDate(date)}</time>
+      <span>约 {minutes} 分钟</span>
+    </div>
+    <h3>{title}</h3>
+    {description && <p class="card-blurb">{description}</p>}
+    <span class="more">{more}</span>
+  </div>
+</a>

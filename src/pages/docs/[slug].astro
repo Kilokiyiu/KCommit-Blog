@@ -1,0 +1,81 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import MarkdownBody from '../../components/MarkdownBody.astro';
+import { getDoc, listDocs } from '../../lib/api';
+import { formatDate, readingMinutes } from '../../lib/format';
+
+export async function getStaticPaths() {
+  const docs = await listDocs();
+  return docs.map((doc) => ({
+    params: { slug: doc.id },
+  }));
+}
+
+const slug = Astro.params.slug!;
+const doc = await getDoc(slug);
+
+if (!doc) {
+  return Astro.redirect('/docs/');
+}
+
+const all = await listDocs();
+const sameCategory = all.filter((d) => (d.category ?? '') === (doc.category ?? ''));
+const pool = sameCategory.length > 1 ? sameCategory : all;
+const index = pool.findIndex((d) => d.id === slug);
+const prev = index >= 0 && index < pool.length - 1 ? pool[index + 1] : null;
+const next = index > 0 ? pool[index - 1] : null;
+const minutes = readingMinutes(doc.markdown);
+---
+
+<BaseLayout title={doc.title} description={doc.description}>
+  <div class="read-shell read-shell-doc">
+    <a class="back-link" href="/docs/">← 技术文档</a>
+
+    <article class="glass-panel read-panel">
+      <header class="read-header">
+        <p class="post-meta">
+          {
+            doc.category && (
+              <>
+                <span class="doc-category">{doc.category}</span>
+                <span aria-hidden="true">·</span>
+              </>
+            )
+          }
+          <time datetime={doc.date}>{formatDate(doc.date, 'long')}</time>
+          <span aria-hidden="true">·</span>
+          <span>约 {minutes} 分钟</span>
+        </p>
+        <h1>{doc.title}</h1>
+        {doc.description && <p class="read-desc">{doc.description}</p>}
+      </header>
+
+      <MarkdownBody markdown={doc.markdown} class="post-content prose" />
+
+      <footer class="read-footer">
+        <div class="read-nav">
+          {
+            prev ? (
+              <a class="read-nav-link is-prev" href={`/docs/${prev.id}/`}>
+                <span class="read-nav-label">上一篇</span>
+                <span class="read-nav-title">{prev.title}</span>
+              </a>
+            ) : (
+              <span class="read-nav-link is-empty" />
+            )
+          }
+          {
+            next ? (
+              <a class="read-nav-link is-next" href={`/docs/${next.id}/`}>
+                <span class="read-nav-label">下一篇</span>
+                <span class="read-nav-title">{next.title}</span>
+              </a>
+            ) : (
+              <span class="read-nav-link is-empty" />
+            )
+          }
+        </div>
+      </footer>
+    </article>
+  </div>
+</BaseLayout>

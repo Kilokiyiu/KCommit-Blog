@@ -1,0 +1,484 @@
+---
+interface Track {
+  title: string;
+  artist: string;
+  src: string;
+}
+
+interface Props {
+  tracks: Track[];
+}
+
+const { tracks } = Astro.props;
+const playlistJson = JSON.stringify(tracks);
+---
+
+{
+  tracks.length > 0 && (
+    <aside
+      class="music-player is-site-dock is-collapsed"
+      data-playlist={playlistJson}
+      aria-label="音乐播放器"
+      transition:persist="site-music"
+    >
+      <button type="button" class="music-dock-toggle" data-music-dock aria-expanded="false" aria-label="展开播放器">
+        <span class="music-dock-disc" aria-hidden="true"></span>
+        <span class="music-dock-label">音乐</span>
+      </button>
+
+      <div class="music-panel">
+        <button type="button" class="music-panel-close" data-music-dock-close aria-label="收起播放器">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+            <path fill="currentColor" d="M9.4 6 8 7.4 12.6 12 8 16.6 9.4 18l6-6z"></path>
+          </svg>
+        </button>
+        <div class="music-drag-bar" data-music-drag aria-hidden="true">
+          <span></span>
+        </div>
+        <div class="music-head">
+          <div class="music-disc" aria-hidden="true">
+            <span class="music-disc-ring"></span>
+            <span class="music-disc-hole"></span>
+          </div>
+          <div class="music-meta">
+            <span class="music-kicker">Now playing</span>
+            <strong class="music-title">
+              <span class="music-title-text" data-music-title>{tracks[0].title}</span>
+            </strong>
+            <span class="music-artist" data-music-artist>
+              {tracks[0].artist}
+            </span>
+          </div>
+        </div>
+
+        <div class="music-progress">
+          <span class="music-time-cur" data-music-current>0:00</span>
+          <input
+            class="music-seek"
+            type="range"
+            min="0"
+            max="1000"
+            value="0"
+            step="1"
+            data-music-seek
+            aria-label="进度"
+          />
+          <span class="music-time-dur" data-music-duration>0:00</span>
+        </div>
+
+        <div class="music-controls">
+          <button type="button" class="music-btn" data-music-prev aria-label="上一首">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M6 5h2v14H6V5zm3.5 7 9.5 6.5v-13L9.5 12z"></path>
+            </svg>
+          </button>
+          <button type="button" class="music-btn music-btn-main" data-music-toggle aria-label="播放">
+            <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M8.5 5.5v13l11-6.5-11-6.5z"></path>
+            </svg>
+            <svg class="icon-pause" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M7 5h3.5v14H7V5zm6.5 0H17v14h-3.5V5z"></path>
+            </svg>
+          </button>
+          <button type="button" class="music-btn" data-music-next aria-label="下一首">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M16 5h2v14h-2V5zM5 18.5 14.5 12 5 5.5v13z"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <audio data-music-audio preload="metadata"></audio>
+    </aside>
+  )
+}
+
+<script>
+  function formatTime(sec: number) {
+    if (!Number.isFinite(sec) || sec < 0) return '0:00';
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  function isMobileDock() {
+    return window.matchMedia('(max-width: 1019px)').matches;
+  }
+
+  const DOCK_POS_KEY = 'music-dock-pos-v3';
+
+  function defaultDockTop() {
+    return 76; // 贴在顶部，略低于导航
+  }
+
+  function initPlayer(root: HTMLElement) {
+    if (root.dataset.musicReady === '1') {
+      root.dispatchEvent(new CustomEvent('music:resync'));
+      return;
+    }
+    root.dataset.musicReady = '1';
+
+    const raw = root.dataset.playlist;
+    if (!raw) return;
+
+    let tracks: { title: string; artist: string; src: string }[] = [];
+    try {
+      tracks = JSON.parse(raw);
+    } catch {
+      return;
+    }
+    if (!tracks.length) return;
+
+    const audio = root.querySelector<HTMLAudioElement>('[data-music-audio]');
+    const titleEl = root.querySelector<HTMLElement>('[data-music-title]');
+    const titleBox = root.querySelector<HTMLElement>('.music-title');
+    const artistEl = root.querySelector<HTMLElement>('[data-music-artist]');
+    const currentEl = root.querySelector<HTMLElement>('[data-music-current]');
+    const durationEl = root.querySelector<HTMLElement>('[data-music-duration]');
+    const seek = root.querySelector<HTMLInputElement>('[data-music-seek]');
+    const toggle = root.querySelector<HTMLButtonElement>('[data-music-toggle]');
+    const prev = root.querySelector<HTMLButtonElement>('[data-music-prev]');
+    const next = root.querySelector<HTMLButtonElement>('[data-music-next]');
+    const dockBtn = root.querySelector<HTMLButtonElement>('[data-music-dock]');
+    const dockClose = root.querySelector<HTMLButtonElement>('[data-music-dock-close]');
+    const dragBar = root.querySelector<HTMLElement>('[data-music-drag]');
+    const disc = root.querySelector<HTMLElement>('.music-disc');
+    const dockDisc = root.querySelector<HTMLElement>('.music-dock-disc');
+
+    if (!audio || !seek || !toggle) return;
+
+    audio.volume = 0.15;
+
+    let index = 0;
+    let seeking = false;
+    let hideTimer: number | undefined;
+    let dockMoved = false;
+    let dockSide: 'left' | 'right' = 'right';
+
+    const setProgress = (ratio: number) => {
+      const pct = `${Math.round(Math.min(1, Math.max(0, ratio)) * 100)}%`;
+      seek.style.setProperty('--progress', pct);
+    };
+
+    const clearDockPos = () => {
+      root.classList.remove('is-dock-placed', 'is-dragging', 'is-dock-left', 'is-dock-right');
+      root.style.removeProperty('--dock-top');
+    };
+
+    const clampTop = (top: number) => {
+      const h = root.offsetHeight || 80;
+      return Math.min(window.innerHeight - h - 8, Math.max(8, top));
+    };
+
+    /** 贴左/右边缘，只改纵向位置 */
+    const applyDockEdge = (side: 'left' | 'right', top: number, persist = true) => {
+      dockSide = side;
+      const clamped = clampTop(top);
+      root.classList.add('is-dock-placed');
+      root.classList.toggle('is-dock-left', side === 'left');
+      root.classList.toggle('is-dock-right', side === 'right');
+      root.style.setProperty('--dock-top', `${clamped}px`);
+      if (persist) {
+        try {
+          localStorage.setItem(DOCK_POS_KEY, JSON.stringify({ side, top: clamped }));
+        } catch {
+          /* ignore */
+        }
+      }
+      return clamped;
+    };
+
+    const restoreDockPos = () => {
+      if (!isMobileDock()) {
+        clearDockPos();
+        return;
+      }
+      try {
+        const rawPos = localStorage.getItem(DOCK_POS_KEY);
+        if (!rawPos) {
+          applyDockEdge('right', defaultDockTop(), false);
+          return;
+        }
+        const pos = JSON.parse(rawPos) as { side?: string; top?: number };
+        const side = pos.side === 'left' ? 'left' : 'right';
+        const top = typeof pos.top === 'number' ? pos.top : defaultDockTop();
+        applyDockEdge(side, top, false);
+      } catch {
+        applyDockEdge('right', defaultDockTop(), false);
+      }
+    };
+
+    const bindDockDrag = (handle: HTMLElement | null) => {
+      if (!handle) return;
+
+      let dragging = false;
+      let startY = 0;
+      let originTop = 0;
+      let pointerId = 0;
+
+      const onMove = (e: PointerEvent) => {
+        if (!dragging || e.pointerId !== pointerId) return;
+        const dy = e.clientY - startY;
+        if (Math.abs(dy) > 6) dockMoved = true;
+        // 拖到另一半屏幕时换边
+        const side = e.clientX < window.innerWidth / 2 ? 'left' : 'right';
+        applyDockEdge(side, originTop + dy, false);
+        e.preventDefault();
+      };
+
+      const onUp = (e: PointerEvent) => {
+        if (!dragging || e.pointerId !== pointerId) return;
+        dragging = false;
+        root.classList.remove('is-dragging');
+        handle.releasePointerCapture?.(pointerId);
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        window.removeEventListener('pointercancel', onUp);
+        const top = Number.parseFloat(root.style.getPropertyValue('--dock-top')) || originTop;
+        const side = e.clientX < window.innerWidth / 2 ? 'left' : 'right';
+        applyDockEdge(side, top, true);
+        scheduleAutoHide();
+      };
+
+      handle.addEventListener('pointerdown', (e) => {
+        if (!isMobileDock() || e.button !== 0) return;
+        if ((e.target as HTMLElement).closest('input, a, .music-btn, .music-panel-close')) return;
+
+        const rect = root.getBoundingClientRect();
+        dragging = true;
+        dockMoved = false;
+        pointerId = e.pointerId;
+        startY = e.clientY;
+        originTop = rect.top;
+        root.classList.add('is-dragging');
+        applyDockEdge(dockSide, rect.top, false);
+        handle.setPointerCapture?.(pointerId);
+        window.clearTimeout(hideTimer);
+        window.addEventListener('pointermove', onMove, { passive: false });
+        window.addEventListener('pointerup', onUp);
+        window.addEventListener('pointercancel', onUp);
+      });
+    };
+
+    const syncDockMode = () => {
+      const mobile = isMobileDock();
+      const homeSlot = document.querySelector<HTMLElement>('[data-music-slot]');
+      root.classList.toggle('is-mobile-dock', mobile);
+      // 首页桌面：嵌回 hero；其它页 / 手机：悬浮坞
+      const parkInHome = Boolean(homeSlot) && !mobile;
+      root.classList.toggle('is-home-dock', parkInHome);
+      root.classList.toggle('is-float-dock', !parkInHome);
+
+      if (parkInHome && homeSlot) {
+        if (root.parentElement !== homeSlot) homeSlot.appendChild(root);
+        clearDockPos();
+        root.style.removeProperty('top');
+        root.style.removeProperty('left');
+        root.style.removeProperty('right');
+        root.style.removeProperty('width');
+        root.style.removeProperty('transform');
+        return;
+      }
+
+      if (root.parentElement !== document.body) {
+        document.body.appendChild(root);
+      }
+      if (!mobile) {
+        clearDockPos();
+        root.style.removeProperty('top');
+        root.style.removeProperty('left');
+        root.style.removeProperty('right');
+        root.style.removeProperty('width');
+        root.style.removeProperty('transform');
+        return;
+      }
+      restoreDockPos();
+    };
+
+    const setCollapsed = (collapsed: boolean) => {
+      syncDockMode();
+      if (!isMobileDock()) {
+        root.classList.remove('is-collapsed');
+        dockBtn?.setAttribute('aria-expanded', 'true');
+        return;
+      }
+      root.classList.toggle('is-collapsed', collapsed);
+      dockBtn?.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      dockBtn?.setAttribute('aria-label', collapsed ? '展开播放器' : '收起播放器');
+      requestAnimationFrame(() => {
+        const top = Number.parseFloat(root.style.getPropertyValue('--dock-top'));
+        if (Number.isFinite(top)) applyDockEdge(dockSide, top, true);
+      });
+    };
+
+    const scheduleAutoHide = () => {
+      window.clearTimeout(hideTimer);
+      if (!isMobileDock() || root.classList.contains('is-collapsed') || root.classList.contains('is-dragging')) {
+        return;
+      }
+      hideTimer = window.setTimeout(() => setCollapsed(true), 2800);
+    };
+
+    const bumpActivity = () => {
+      if (!isMobileDock()) return;
+      setCollapsed(false);
+      scheduleAutoHide();
+    };
+
+    const setPlayingUi = (playing: boolean) => {
+      root.classList.toggle('is-playing', playing);
+      disc?.classList.toggle('is-spinning', playing);
+      dockDisc?.classList.toggle('is-spinning', playing);
+      toggle.setAttribute('aria-label', playing ? '暂停' : '播放');
+    };
+
+    const syncTitleOverflow = () => {
+      if (!titleEl || !titleBox) return;
+      titleBox.classList.remove('is-overflow');
+      titleBox.style.removeProperty('--title-box');
+      // force reflow so width is measured without animation
+      void titleEl.offsetWidth;
+      const overflow = titleEl.scrollWidth > titleBox.clientWidth + 1;
+      titleBox.classList.toggle('is-overflow', overflow);
+      if (overflow) {
+        titleBox.style.setProperty('--title-box', `${titleBox.clientWidth}px`);
+      }
+    };
+
+    const loadTrack = (i: number, autoplay = false) => {
+      index = (i + tracks.length) % tracks.length;
+      const track = tracks[index];
+      audio.src = encodeURI(track.src);
+      if (titleEl) titleEl.textContent = track.title;
+      if (artistEl) artistEl.textContent = track.artist;
+      seek.value = '0';
+      setProgress(0);
+      if (currentEl) currentEl.textContent = '0:00';
+      if (durationEl) durationEl.textContent = '0:00';
+      requestAnimationFrame(syncTitleOverflow);
+      if (autoplay) {
+        void audio.play().then(() => setPlayingUi(true)).catch(() => setPlayingUi(false));
+      } else {
+        setPlayingUi(false);
+      }
+    };
+
+    toggle.addEventListener('click', () => {
+      bumpActivity();
+      if (audio.paused) {
+        void audio.play().then(() => setPlayingUi(true)).catch(() => setPlayingUi(false));
+      } else {
+        audio.pause();
+        setPlayingUi(false);
+      }
+    });
+
+    prev?.addEventListener('click', () => {
+      bumpActivity();
+      if (tracks.length < 2) {
+        audio.currentTime = 0;
+        void audio.play().then(() => setPlayingUi(true)).catch(() => setPlayingUi(false));
+        return;
+      }
+      loadTrack(index - 1, true);
+    });
+    next?.addEventListener('click', () => {
+      bumpActivity();
+      if (tracks.length < 2) {
+        audio.currentTime = 0;
+        void audio.play().then(() => setPlayingUi(true)).catch(() => setPlayingUi(false));
+        return;
+      }
+      loadTrack(index + 1, true);
+    });
+
+    dockBtn?.addEventListener('click', (e) => {
+      if (dockMoved) {
+        e.preventDefault();
+        dockMoved = false;
+        return;
+      }
+      const nextCollapsed = !root.classList.contains('is-collapsed');
+      setCollapsed(nextCollapsed);
+      if (!nextCollapsed) scheduleAutoHide();
+      else window.clearTimeout(hideTimer);
+    });
+
+    dockClose?.addEventListener('click', () => {
+      window.clearTimeout(hideTimer);
+      setCollapsed(true);
+    });
+
+    bindDockDrag(dockBtn);
+    bindDockDrag(dragBar);
+    bindDockDrag(root.querySelector('.music-head'));
+
+    root.addEventListener('pointerdown', () => {
+      if (isMobileDock() && !root.classList.contains('is-collapsed') && !root.classList.contains('is-dragging')) {
+        scheduleAutoHide();
+      }
+    });
+
+    seek.addEventListener('input', () => {
+      setProgress(Number(seek.value) / 1000);
+    });
+    seek.addEventListener('pointerdown', () => {
+      seeking = true;
+      bumpActivity();
+    });
+    seek.addEventListener('pointerup', () => {
+      seeking = false;
+      if (audio.duration) {
+        audio.currentTime = (Number(seek.value) / 1000) * audio.duration;
+      }
+    });
+    seek.addEventListener('change', () => {
+      if (audio.duration) {
+        audio.currentTime = (Number(seek.value) / 1000) * audio.duration;
+      }
+    });
+
+    audio.addEventListener('loadedmetadata', () => {
+      if (durationEl) durationEl.textContent = formatTime(audio.duration);
+    });
+    audio.addEventListener('timeupdate', () => {
+      if (seeking || !audio.duration) return;
+      const ratio = audio.currentTime / audio.duration;
+      seek.value = String(Math.round(ratio * 1000));
+      setProgress(ratio);
+      if (currentEl) currentEl.textContent = formatTime(audio.currentTime);
+    });
+    audio.addEventListener('ended', () => {
+      if (tracks.length > 1) loadTrack(index + 1, true);
+      else setPlayingUi(false);
+    });
+    audio.addEventListener('pause', () => setPlayingUi(false));
+    audio.addEventListener('play', () => setPlayingUi(true));
+
+    window.matchMedia('(max-width: 1019px)').addEventListener('change', (e) => {
+      window.clearTimeout(hideTimer);
+      syncDockMode();
+      setCollapsed(e.matches);
+    });
+
+    const resync = () => setCollapsed(isMobileDock());
+    root.addEventListener('music:resync', resync);
+    document.addEventListener('astro:page-load', resync);
+
+    setProgress(0);
+    /** 每次打开随机一首；上一首 / 下一首 / 播完仍按歌单顺序 */
+    const startIndex =
+      tracks.length > 1 ? Math.floor(Math.random() * tracks.length) : 0;
+    loadTrack(startIndex);
+    syncDockMode();
+    setCollapsed(isMobileDock());
+    window.addEventListener('resize', syncTitleOverflow);
+  }
+
+  const bootPlayers = () => {
+    document.querySelectorAll<HTMLElement>('.music-player').forEach(initPlayer);
+  };
+
+  bootPlayers();
+  document.addEventListener('astro:page-load', bootPlayers);
+</script>

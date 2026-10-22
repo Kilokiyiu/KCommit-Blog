@@ -1,0 +1,66 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import MarkdownBody from '../../components/MarkdownBody.astro';
+import { getProject, getProjects } from '../../lib/api';
+
+export async function getStaticPaths() {
+  const projects = await getProjects();
+  return projects.map((project) => ({
+    params: { slug: project.id },
+  }));
+}
+
+const slug = Astro.params.slug!;
+const project = await getProject(slug);
+
+if (!project) {
+  return Astro.redirect('/projects/');
+}
+
+const isExternal = project.url.startsWith('http');
+const visitLabel = isExternal ? '打开站点' : '回到本站';
+---
+
+<BaseLayout title={project.name} description={project.blurb}>
+  <div class="read-shell">
+    <a class="back-link" href="/projects/">← 项目</a>
+
+    <article class="glass-panel read-panel">
+      {
+        project.image && (
+          <div class="read-cover" style={`--read-cover: url('${project.image}')`} aria-hidden="true" />
+        )
+      }
+
+      <header class="read-header">
+        <p class="post-meta">
+          <span class="status">{project.status}</span>
+          {
+            project.tags.length > 0 && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{project.tags.join(' / ')}</span>
+              </>
+            )
+          }
+        </p>
+        <h1>{project.name}</h1>
+        {project.blurb && <p class="read-desc">{project.blurb}</p>}
+      </header>
+
+      <MarkdownBody markdown={project.body} class="post-content prose" />
+
+      <footer class="read-footer project-actions">
+        <a
+          class="btn btn-primary"
+          href={project.url}
+          target={isExternal ? '_blank' : undefined}
+          rel={isExternal ? 'noopener noreferrer' : undefined}
+        >
+          {visitLabel}
+        </a>
+        <a class="btn btn-ghost" href="/projects/">全部项目</a>
+      </footer>
+    </article>
+  </div>
+</BaseLayout>

@@ -1,0 +1,22 @@
+{
+  "name": "kcommit-blog",
+  "private": false,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Astro personal blog theme with posts, projects, friends zodiac map, and optional remote API.",
+  "license": "MIT",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/rss": "^4.0.19",
+    "@astrojs/sitemap": "^3.7.4",
+    "astro": "^5.13.0",
+    "marked": "^18.1.1"
+  },
+  "devDependencies": {
+    "@types/marked": "^5.0.2"
+  }
+}

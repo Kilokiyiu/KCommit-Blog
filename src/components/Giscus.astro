@@ -1,0 +1,35 @@
+---
+import { site } from '../site';
+
+const g = site.giscus;
+const enabled = Boolean(g?.enabled && g.repo && g.repoId && g.category && g.categoryId);
+---
+
+{
+  enabled && (
+    <section class="giscus-section" aria-label="评论">
+      <h2 class="giscus-heading">评论</h2>
+      <p class="giscus-hint">用 GitHub 账号登录后即可留言。评论存在本站仓库的 Discussions 里。</p>
+      <div class="giscus-host">
+        <script
+          is:inline
+          src="https://giscus.app/client.js"
+          data-repo={g.repo}
+          data-repo-id={g.repoId}
+          data-category={g.category}
+          data-category-id={g.categoryId}
+          data-mapping={g.mapping}
+          data-strict={g.strict}
+          data-reactions-enabled={g.reactionsEnabled}
+          data-emit-metadata={g.emitMetadata}
+          data-input-position={g.inputPosition}
+          data-theme={g.theme}
+          data-lang={g.lang}
+          data-loading={g.loading}
+          crossorigin="anonymous"
+          async
+        />
+      </div>
+    </section>
+  )
+}

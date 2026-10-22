@@ -1,0 +1,32 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/PageHero.astro';
+import { getProjects } from '../../lib/api';
+
+const projects = await getProjects();
+---
+
+<BaseLayout title="项目" description="我在做和用过的项目">
+  <main class="shell">
+    <PageHero title="项目" lead="点开查看详细内容" />
+
+    <div class="project-grid">
+      {
+        projects.map((project) => (
+          <a class="project-card project-card-lg" href={`/projects/${project.id}/`}>
+            <div class="project-card-top">
+              <strong>{project.name}</strong>
+              <span class="status">{project.status}</span>
+            </div>
+            <span>{project.blurb}</span>
+            <div class="tag-row">
+              {project.tags.map((tag) => (
+                <span class="tag">{tag}</span>
+              ))}
+            </div>
+          </a>
+        ))
+      }
+    </div>
+  </main>
+</BaseLayout>

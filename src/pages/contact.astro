@@ -1,0 +1,54 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import { getProjects, getSite } from '../lib/api';
+
+const site = await getSite();
+const projects = await getProjects();
+const primary = projects[0];
+---
+
+<BaseLayout title="联系" description={`联系 ${site.name}`}>
+  <main class="shell narrow">
+    <PageHero title="写信" lead={site.contact.intro} />
+
+    <div class="contact-grid">
+      <a class="contact-card" href={`mailto:${site.email}`}>
+        <strong>邮箱</strong>
+        <span>{site.email}</span>
+      </a>
+      <a
+        class="contact-card"
+        href={`https://github.com/${site.githubUser}`}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <strong>GitHub</strong>
+        <span>@{site.githubUser}</span>
+      </a>
+      {
+        site.contact.qq && (
+          <div class="contact-card">
+            <strong>QQ</strong>
+            <span>{site.contact.qq}</span>
+          </div>
+        )
+      }
+      {
+        primary && (
+          <a
+            class="contact-card"
+            href={primary.url}
+            target={primary.url.startsWith('http') ? '_blank' : undefined}
+            rel={primary.url.startsWith('http') ? 'noopener noreferrer' : undefined}
+          >
+            <strong>{primary.name}</strong>
+            <span>{primary.url.replace(/^https?:\/\//, '')}</span>
+          </a>
+        )
+      }
+    </div>
+
+    <p class="contact-note">{site.contact.wechatNote}</p>
+  </main>
+</BaseLayout>

@@ -1,0 +1,493 @@
+---
+import { ZODIAC, projectChart, type ZodiacId } from '../lib/zodiac';
+
+export interface FriendStar {
+  id: string;
+  name: string;
+  url: string;
+  description?: string;
+  avatar?: string;
+  zodiac?: ZodiacId | string;
+}
+
+interface Props {
+  friends: FriendStar[];
+}
+
+const { friends } = Astro.props;
+
+const VB_W = 800;
+const VB_H = 560;
+
+const charts = ZODIAC.map((z) => {
+  const projected = projectChart(z, VB_W, VB_H, 52);
+  const withIndex = friends
+    .map((f, i) => {
+      const zodiacId =
+        f.zodiac && ZODIAC.some((c) => c.id === f.zodiac || c.name === f.zodiac)
+          ? (ZODIAC.find((c) => c.id === f.zodiac || c.name === f.zodiac)!.id as ZodiacId)
+          : ZODIAC[i % ZODIAC.length].id;
+      return { ...f, zodiacId };
+    })
+    .filter((f) => f.zodiacId === z.id);
+
+  const friendStars = withIndex.map((f, i) => {
+    const star = projected.stars[Math.min(i, projected.stars.length - 1)];
+    const bump = i >= projected.stars.length ? (i - projected.stars.length + 1) * 14 : 0;
+    const x = star.x + bump;
+    const y = Math.max(18, star.y - bump * 0.35);
+    const arm = 11;
+    return {
+      ...f,
+      x,
+      y,
+      hostLabel: star.label,
+      style: `--tw-delay:${(i % 6) * 0.28}s;--j-delay:${(i % 5) * 0.17}s;--bang-delay:${(i % 4) * 0.35}s`,
+      arm,
+      diag: arm * 0.55,
+      glowR: 9.5,
+      coreR: 3.4,
+    };
+  });
+
+  const stars = projected.stars.map((s, si) => {
+    const bright = s.mag < 2.41;
+    const mid = !bright && s.mag < 3.41;
+    const glowR = s.r * (bright ? 2.8 : mid ? 2.3 : 1.9);
+    const arm = bright ? s.r * 2.6 : mid ? s.r * 2.0 : s.r * 1.45;
+    return {
+      ...s,
+      bright,
+      mid,
+      glowR,
+      arm,
+      diag: arm * 0.55,
+      hitR: Math.max(10, s.r * 3.2),
+      style: `--tw-delay:${(si % 12) * 0.22}s;--tw-dur:${2.4 + (si % 5) * 0.35}s`,
+      wrapClass: ['zodiac-star-wrap', bright && 'is-bright', mid && 'is-mid'],
+    };
+  });
+
+  return { ...projected, stars, friendStars };
+});
+---
+
+<section class="zodiac-sky is-fullscreen" data-zodiac-sky aria-label="星座友链图">
+  <div class="zodiac-fx" aria-hidden="true" data-zodiac-fx>
+    <canvas class="zodiac-field-canvas" data-zodiac-field></canvas>
+    <div class="zodiac-shooters" data-zodiac-shooters></div>
+  </div>
+
+  <header class="zodiac-hud">
+    <div class="zodiac-hud-text">
+      <p class="zodiac-kicker">友链星空</p>
+      <h1 class="zodiac-heading" data-zodiac-name>—</h1>
+      <p class="zodiac-sub" data-zodiac-count></p>
+    </div>
+    <div class="zodiac-hud-actions">
+      <button type="button" class="zodiac-btn" data-zodiac-reroll>换一座</button>
+      <a class="zodiac-btn is-ghost" href="#friend-apply">挂星</a>
+    </div>
+  </header>
+
+  <div class="zodiac-stage" data-zodiac-stage>
+    {
+      charts.map((chart, i) => (
+        <article
+          class:list={['zodiac-chart', i === 0 && 'is-active']}
+          data-zodiac-chart={chart.id}
+          data-zodiac-label={chart.name}
+          data-zodiac-la={chart.la}
+          hidden={i !== 0}
+          aria-hidden={i !== 0 ? 'true' : 'false'}
+        >
+          <svg
+            class="zodiac-svg"
+            viewBox={`0 0 ${chart.W} ${chart.H}`}
+            preserveAspectRatio="xMidYMid meet"
+            role="img"
+            aria-label={chart.name}
+          >
+            <defs>
+              <radialGradient id={`glow-${chart.id}`} cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="1" />
+                <stop offset="40%" stop-color="#fff8e8" stop-opacity="0.9" />
+                <stop offset="100%" stop-color="#c8dcff" stop-opacity="0" />
+              </radialGradient>
+              <radialGradient id={`friend-glow-${chart.id}`} cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="1" />
+                <stop offset="25%" stop-color="#fff0c0" stop-opacity="1" />
+                <stop offset="55%" stop-color="#ffd078" stop-opacity="0.85" />
+                <stop offset="100%" stop-color="#ffb040" stop-opacity="0" />
+              </radialGradient>
+              <filter id={`soft-${chart.id}`} x="-100%" y="-100%" width="300%" height="300%">
+                <feGaussianBlur stdDeviation="0.7" result="b" />
+                <feMerge>
+                  <feMergeNode in="b" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            <g class="zodiac-lines" stroke="rgba(235,240,255,0.38)" stroke-width="1.05" stroke-linecap="round" fill="none">
+              {chart.lines.map((ln) => (
+                <line x1={ln.x1} y1={ln.y1} x2={ln.x2} y2={ln.y2} />
+              ))}
+            </g>
+
+            <g class="zodiac-stars">
+              {
+                chart.stars.map((s) => (
+                  <g
+                    class:list={s.wrapClass}
+                    style={s.style}
+                    data-n={s.label}
+                    data-m={s.mag.toFixed(2)}
+                    data-tip="star"
+                  >
+                    <circle cx={s.x} cy={s.y} r={s.hitR} class="zodiac-star-hit" />
+                    <circle cx={s.x} cy={s.y} r={s.glowR} class="zodiac-star-glow" fill={`url(#glow-${chart.id})`} />
+                    {s.arm > 0 && (
+                      <g class="zodiac-star-spikes" filter={`url(#soft-${chart.id})`}>
+                        <line x1={s.x - s.arm} y1={s.y} x2={s.x + s.arm} y2={s.y} />
+                        <line x1={s.x} y1={s.y - s.arm} x2={s.x} y2={s.y + s.arm} />
+                        {s.bright && (
+                          <g>
+                            <line
+                              x1={s.x - s.diag}
+                              y1={s.y - s.diag}
+                              x2={s.x + s.diag}
+                              y2={s.y + s.diag}
+                              class="is-diag"
+                            />
+                            <line
+                              x1={s.x - s.diag}
+                              y1={s.y + s.diag}
+                              x2={s.x + s.diag}
+                              y2={s.y - s.diag}
+                              class="is-diag"
+                            />
+                          </g>
+                        )}
+                      </g>
+                    )}
+                    <circle class="zodiac-star" cx={s.x} cy={s.y} r={s.r} />
+                  </g>
+                ))
+              }
+            </g>
+
+            {
+              chart.friendStars.map((friend) => (
+                <a
+                  href={friend.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="zodiac-friend"
+                  style={friend.style}
+                  data-name={friend.name}
+                  data-desc={friend.description ?? ''}
+                >
+                  <title>
+                    {friend.name}
+                    {friend.description ? ` — ${friend.description}` : ''}
+                  </title>
+                  <g class="zodiac-friend-body">
+                    <circle cx={friend.x} cy={friend.y} r="15" class="zodiac-friend-hit" />
+                    <circle
+                      cx={friend.x}
+                      cy={friend.y}
+                      r={friend.glowR}
+                      class="zodiac-friend-glow"
+                      fill={`url(#friend-glow-${chart.id})`}
+                    />
+                    <g class="zodiac-friend-spikes" filter={`url(#soft-${chart.id})`}>
+                      <line x1={friend.x - friend.arm} y1={friend.y} x2={friend.x + friend.arm} y2={friend.y} />
+                      <line x1={friend.x} y1={friend.y - friend.arm} x2={friend.x} y2={friend.y + friend.arm} />
+                      <line
+                        x1={friend.x - friend.diag}
+                        y1={friend.y - friend.diag}
+                        x2={friend.x + friend.diag}
+                        y2={friend.y + friend.diag}
+                        class="is-diag"
+                      />
+                      <line
+                        x1={friend.x - friend.diag}
+                        y1={friend.y + friend.diag}
+                        x2={friend.x + friend.diag}
+                        y2={friend.y - friend.diag}
+                        class="is-diag"
+                      />
+                    </g>
+                    <circle cx={friend.x} cy={friend.y} r={friend.coreR} class="zodiac-friend-core" />
+                    <text
+                      x={friend.x + 10}
+                      y={friend.y - 11}
+                      class="zodiac-friend-bang"
+                      text-anchor="middle"
+                      dominant-baseline="central"
+                    >
+                      !
+                    </text>
+                  </g>
+                </a>
+              ))
+            }
+          </svg>
+        </article>
+      ))
+    }
+  </div>
+
+  <p class="zodiac-scroll-hint" aria-hidden="true">向下 · 挂星</p>
+</section>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-zodiac-sky]');
+  if (root) {
+    const charts = Array.from(root.querySelectorAll<HTMLElement>('[data-zodiac-chart]'));
+    const nameEl = root.querySelector<HTMLElement>('[data-zodiac-name]');
+    const countEl = root.querySelector<HTMLElement>('[data-zodiac-count]');
+    const reroll = root.querySelector<HTMLButtonElement>('[data-zodiac-reroll]');
+    const stage = root.querySelector<HTMLElement>('[data-zodiac-stage]');
+    const fx = root.querySelector<HTMLElement>('[data-zodiac-fx]');
+    const shooters = root.querySelector<HTMLElement>('[data-zodiac-shooters]');
+    const field = root.querySelector<HTMLCanvasElement>('[data-zodiac-field]');
+
+    const show = (el: HTMLElement) => {
+      charts.forEach((c) => {
+        const on = c === el;
+        c.classList.toggle('is-active', on);
+        c.hidden = !on;
+        c.setAttribute('aria-hidden', on ? 'false' : 'true');
+      });
+      root.classList.remove('is-switching');
+      void root.offsetWidth;
+      root.classList.add('is-switching');
+      const label = el.dataset.zodiacLabel ?? '';
+      const la = el.dataset.zodiacLa ?? '';
+      const n = el.querySelectorAll('.zodiac-friend').length;
+      if (nameEl) nameEl.textContent = label;
+      if (countEl) {
+        countEl.textContent =
+          n > 0 ? `${la} · ${n} 颗可点的友链星` : `${la} · 还没有友链星，先看星座`;
+      }
+    };
+
+    const pickRandom = () => {
+      if (charts.length === 0) return;
+      const active = charts.find((c) => c.classList.contains('is-active'));
+      let next = charts[Math.floor(Math.random() * charts.length)];
+      if (charts.length > 1) {
+        let guard = 0;
+        while (next === active && guard < 8) {
+          next = charts[Math.floor(Math.random() * charts.length)];
+          guard += 1;
+        }
+      }
+      show(next);
+    };
+
+    pickRandom();
+    reroll?.addEventListener('click', pickRandom);
+
+    const onMove = (e: PointerEvent) => {
+      if (!fx || !stage) return;
+      const x = (e.clientX / window.innerWidth - 0.5) * 2;
+      const y = (e.clientY / window.innerHeight - 0.5) * 2;
+      fx.style.transform = `translate3d(${x * -12}px, ${y * -8}px, 0)`;
+      stage.style.transform = `translate3d(${x * 8}px, ${y * 6}px, 0)`;
+    };
+    window.addEventListener('pointermove', onMove);
+
+    const spawnShoot = () => {
+      if (!shooters || Math.random() > 0.55) return;
+      const el = document.createElement('span');
+      el.className = 'zodiac-shoot';
+      el.style.left = `${5 + Math.random() * 70}%`;
+      el.style.top = `${4 + Math.random() * 35}%`;
+      el.style.setProperty('--shoot-rot', `${-20 - Math.random() * 30}deg`);
+      el.style.setProperty('--shoot-len', `${90 + Math.random() * 80}px`);
+      shooters.appendChild(el);
+      window.setTimeout(() => el.remove(), 1600);
+    };
+    window.setInterval(spawnShoot, 5200);
+    window.setTimeout(spawnShoot, 1800);
+
+    if (field) {
+      const ctx = field.getContext('2d');
+      type Star = {
+        x: number;
+        y: number;
+        r: number;
+        a: number;
+        tint: string;
+        tw: number;
+        phase: number;
+        bloom: boolean;
+      };
+      let stars: Star[] = [];
+
+      const hash = (n: number) => {
+        const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+        return x - Math.floor(x);
+      };
+
+      const tintFor = (u: number) => {
+        if (u > 0.94) return '255,196,120';
+        if (u > 0.88) return '255,228,175';
+        if (u > 0.8) return '170,205,255';
+        return '232,238,250';
+      };
+
+      const seedStars = (w: number, h: number) => {
+        const area = w * h;
+        const faint = Math.floor(area / 380);
+        const mid = Math.floor(area / 2800);
+        const bright = Math.floor(area / 18000);
+        const total = Math.max(1400, Math.min(faint + mid + bright, 3200));
+        stars = [];
+        for (let n = 0; n < total; n++) {
+          const u = hash(n + 1);
+          const v = hash(n + 91);
+          const m = hash(n + 203);
+          const kind = m < 0.84 ? 'faint' : m < 0.96 ? 'mid' : 'bright';
+          const tint = tintFor(hash(n + 401));
+          if (kind === 'faint') {
+            stars.push({
+              x: u,
+              y: v,
+              r: 0.25 + hash(n + 17) * 0.55,
+              a: 0.18 + hash(n + 33) * 0.35,
+              tint,
+              tw: 2.4 + hash(n + 51) * 3.2,
+              phase: hash(n + 71) * Math.PI * 2,
+              bloom: false,
+            });
+          } else if (kind === 'mid') {
+            stars.push({
+              x: u,
+              y: v,
+              r: 0.7 + hash(n + 19) * 0.7,
+              a: 0.55 + hash(n + 37) * 0.35,
+              tint,
+              tw: 2 + hash(n + 53) * 2.4,
+              phase: hash(n + 73) * Math.PI * 2,
+              bloom: false,
+            });
+          } else {
+            stars.push({
+              x: u,
+              y: v,
+              r: 1.15 + hash(n + 23) * 0.85,
+              a: 0.88 + hash(n + 41) * 0.12,
+              tint,
+              tw: 2.6 + hash(n + 59) * 2,
+              phase: hash(n + 79) * Math.PI * 2,
+              bloom: true,
+            });
+          }
+        }
+      };
+
+      const resize = () => {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = root.clientWidth;
+        const h = root.clientHeight;
+        field.width = Math.floor(w * dpr);
+        field.height = Math.floor(h * dpr);
+        field.style.width = `${w}px`;
+        field.style.height = `${h}px`;
+        ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
+        seedStars(w, h);
+      };
+      resize();
+      window.addEventListener('resize', resize);
+
+      const tick = (t: number) => {
+        if (!ctx) return;
+        const w = root.clientWidth;
+        const h = root.clientHeight;
+        ctx.clearRect(0, 0, w, h);
+        for (const s of stars) {
+          const pulse = 0.82 + 0.18 * Math.sin(t * 0.001 / s.tw + s.phase);
+          const a = s.a * pulse;
+          const x = s.x * w;
+          const y = s.y * h;
+          if (s.bloom) {
+            const g = ctx.createRadialGradient(x, y, 0, x, y, s.r * 3.2);
+            g.addColorStop(0, `rgba(${s.tint},${a * 0.35})`);
+            g.addColorStop(0.45, `rgba(${s.tint},${a * 0.12})`);
+            g.addColorStop(1, `rgba(${s.tint},0)`);
+            ctx.beginPath();
+            ctx.fillStyle = g;
+            ctx.arc(x, y, s.r * 3.2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.beginPath();
+          ctx.fillStyle = `rgba(${s.tint},${a})`;
+          ctx.arc(x, y, s.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }
+
+    const tip = document.createElement('div');
+    tip.className = 'zodiac-tooltip';
+    tip.hidden = true;
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+
+    const placeTip = (clientX: number, clientY: number) => {
+      const pad = 12;
+      const tw = tip.offsetWidth || 160;
+      const th = tip.offsetHeight || 48;
+      let left = clientX;
+      let top = clientY - th - 18;
+      left = Math.min(window.innerWidth - tw / 2 - pad, Math.max(tw / 2 + pad, left));
+      if (top < pad) top = clientY + 22;
+      tip.style.left = `${left}px`;
+      tip.style.top = `${top}px`;
+    };
+
+    const showTip = (html: string, e: PointerEvent) => {
+      tip.innerHTML = html;
+      tip.hidden = false;
+      tip.classList.add('is-on');
+      placeTip(e.clientX, e.clientY);
+    };
+
+    const hideTip = () => {
+      tip.hidden = true;
+      tip.classList.remove('is-on');
+    };
+
+    root.querySelectorAll<HTMLElement>('.zodiac-friend').forEach((el) => {
+      el.addEventListener('pointerenter', (e) => {
+        const name = el.dataset.name ?? '';
+        const desc = el.dataset.desc ?? '';
+        showTip(
+          `<span class="zodiac-tooltip-kicker">友链</span><strong>${name}</strong>${desc ? `<em>${desc}</em>` : '<em>点击打开站点</em>'}`,
+          e as PointerEvent,
+        );
+      });
+      el.addEventListener('pointermove', (e) => placeTip((e as PointerEvent).clientX, (e as PointerEvent).clientY));
+      el.addEventListener('pointerleave', hideTip);
+    });
+
+    root.querySelectorAll<SVGGElement>('.zodiac-star-wrap').forEach((el) => {
+      el.addEventListener('pointerenter', (e) => {
+        const name = el.dataset.n ?? '';
+        const mag = el.dataset.m ?? '';
+        showTip(
+          `<span class="zodiac-tooltip-kicker">星点</span><strong>${name}</strong>${mag ? `<em>视星等 ${mag}</em>` : ''}`,
+          e as PointerEvent,
+        );
+      });
+      el.addEventListener('pointermove', (e) => placeTip((e as PointerEvent).clientX, (e as PointerEvent).clientY));
+      el.addEventListener('pointerleave', hideTip);
+    });
+  }
+</script>

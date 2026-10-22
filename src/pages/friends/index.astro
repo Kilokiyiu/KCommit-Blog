@@ -1,0 +1,67 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ZodiacSky from '../../components/ZodiacSky.astro';
+import { site } from '../../site';
+import { ZODIAC } from '../../lib/zodiac';
+
+const { friends } = site;
+const self = friends.self;
+---
+
+<BaseLayout title="友链" description={friends.intro} bodyClass="friends-sky">
+  <ZodiacSky friends={friends.items} />
+
+  <section class="friend-apply" id="friend-apply" aria-labelledby="friend-apply-heading">
+    <div class="friend-apply-inner">
+      <header class="friend-apply-copy">
+        <h2 id="friend-apply-heading">挂上一颗星</h2>
+        <p>填好发出邮件即可。本站：{self.name} · <a href={self.url}>{self.url}</a></p>
+      </header>
+
+      <form class="friend-apply-form" data-friend-apply data-mail-to={site.email}>
+        <label class="friend-field">
+          <span>站点名</span>
+          <input type="text" name="name" required maxlength="40" placeholder="你的站叫什么" autocomplete="organization" />
+        </label>
+        <label class="friend-field">
+          <span>链接</span>
+          <input type="url" name="url" required placeholder="https://" autocomplete="url" />
+        </label>
+        <label class="friend-field">
+          <span>介绍</span>
+          <input type="text" name="desc" required maxlength="80" placeholder="一句话" />
+        </label>
+        <label class="friend-field">
+          <span>星座</span>
+          <select name="zodiac">
+            <option value="">随便</option>
+            {ZODIAC.map((z) => (
+              <option value={z.name}>{z.name}</option>
+            ))}
+          </select>
+        </label>
+        <button type="submit" class="friend-apply-cta">发送</button>
+      </form>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('[data-friend-apply]');
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const to = form.dataset.mailTo?.trim();
+    if (!to) return;
+
+    const data = new FormData(form);
+    const name = String(data.get('name') ?? '').trim();
+    const url = String(data.get('url') ?? '').trim();
+    const desc = String(data.get('desc') ?? '').trim();
+    const zodiac = String(data.get('zodiac') ?? '').trim() || '随便安排';
+
+    const body = [`站点名：${name}`, `链接：${url}`, `一句话介绍：${desc}`, `想挂的星座：${zodiac}`, '', '—— 来自友链页挂星表单'].join('\n');
+
+    const href = `mailto:${to}?subject=${encodeURIComponent(`友链交换 · ${name}`)}&body=${encodeURIComponent(body)}`;
+    window.location.href = href;
+  });
+</script>

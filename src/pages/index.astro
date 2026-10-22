@@ -1,0 +1,401 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PostCard from '../components/PostCard.astro';
+import MarkdownBody from '../components/MarkdownBody.astro';
+import BentoCarousel from '../components/BentoCarousel.astro';
+import { formatDate, readingMinutes } from '../lib/format';
+import { getDoc, getPost, getProjects, getSite, getStats, listDocs, listNotes, listPosts, listShares } from '../lib/api';
+import { site as siteConfig } from '../site';
+
+const site = await getSite();
+const stats = await getStats();
+const allPosts = await listPosts();
+const allNotes = await listNotes();
+const allDocs = await listDocs();
+const allShares = await listShares();
+const projects = await getProjects();
+const homeLimit = 2;
+const sharesHome = allShares.slice(0, homeLimit);
+const projectsHome = projects.slice(0, homeLimit);
+const fallbackCovers = siteConfig.covers.fallback;
+
+function shareHost(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+
+const notes = allNotes.slice(0, homeLimit);
+
+const featuredPost = allPosts[0]
+  ? await (async () => {
+      const detail = await getPost(allPosts[0].id);
+      return {
+        summary: allPosts[0],
+        markdown: detail?.markdown ?? '',
+        minutes: readingMinutes(detail?.markdown ?? ''),
+      };
+    })()
+  : null;
+
+const bentoImages = siteConfig.bento;
+/** 小猫旁三格：项目 */
+const projectTiles = projects.slice(0, 3).map((project) => ({
+  kind: 'project' as const,
+  href: `/projects/${project.id}/`,
+  title: project.name,
+  meta: project.status,
+  blurb: project.blurb,
+  external: false,
+  image: project.image,
+  empty: false,
+}));
+const tileFill = [
+  ...projectTiles,
+  ...Array.from({ length: Math.max(0, 3 - projectTiles.length) }, () => ({
+    kind: 'project' as const,
+    href: '/projects/',
+    title: '更多项目',
+    meta: '看看',
+    blurb: '有新的会放在这里。',
+    external: false,
+    image: undefined as string | undefined,
+    empty: true,
+  })),
+];
+
+const featureImage = featuredPost?.summary.cover ?? bentoImages.featured;
+
+const listPostsHome = await Promise.all(
+  allPosts.slice(0, homeLimit).map(async (summary, i) => {
+    const detail = await getPost(summary.id);
+    return {
+      summary,
+      markdown: detail?.markdown ?? '',
+      cover: summary.cover ?? fallbackCovers[i % fallbackCovers.length],
+    };
+  }),
+);
+
+const listDocsHome = await Promise.all(
+  allDocs.slice(0, homeLimit).map(async (summary, i) => {
+    const detail = await getDoc(summary.id);
+    return {
+      summary,
+      markdown: detail?.markdown ?? '',
+      cover: summary.cover ?? fallbackCovers[(i + 1) % fallbackCovers.length],
+    };
+  }),
+);
+---
+
+<BaseLayout>
+  <main class="shell">
+    <section class="hero">
+      <div class="hero-main profile-card">
+        <div class="profile-top">
+          <a class="profile-avatar" href="/about/">
+            <img src={site.avatar} alt={`${site.name} 的头像`} width="72" height="72" />
+          </a>
+          <div class="profile-text">
+            <h1 class="profile-name">{site.name}</h1>
+            <p class="profile-bio">{siteConfig.profileBio}</p>
+          </div>
+        </div>
+        <p class="profile-headline">{siteConfig.profileHeadline}</p>
+
+        <div class="profile-bottom">
+          <div class="profile-stats" aria-label="站点概览">
+            <a href="/posts/">
+              <strong>{stats.posts}</strong>
+              <span>文章</span>
+            </a>
+            <a href="/docs/">
+              <strong>{stats.docs}</strong>
+              <span>文档</span>
+            </a>
+            <a href="/notes/">
+              <strong>{stats.notes}</strong>
+              <span>说说</span>
+            </a>
+            <a href="/projects/">
+              <strong class="is-accent">{stats.projects}</strong>
+              <span>项目</span>
+            </a>
+          </div>
+
+          <div class="profile-socials" aria-label="联系方式">
+            <a
+              class="profile-social"
+              href={`https://github.com/${site.githubUser}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="GitHub"
+              title="GitHub"
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                <path
+                  fill="currentColor"
+                  d="M12 2C6.48 2 2 6.58 2 12.26c0 4.52 2.87 8.35 6.84 9.71.5.1.68-.22.68-.48 0-.24-.01-.87-.01-1.71-2.78.62-3.37-1.37-3.37-1.37-.46-1.2-1.12-1.52-1.12-1.52-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.9 1.58 2.36 1.12 2.94.86.09-.67.35-1.12.63-1.38-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.27 2.75 1.05A9.3 9.3 0 0 1 12 6.84c.85 0 1.7.12 2.5.34 1.9-1.32 2.74-1.05 2.74-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.8-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .26.18.59.69.48A10.01 10.01 0 0 0 22 12.26C22 6.58 17.52 2 12 2z"
+                ></path>
+              </svg>
+            </a>
+            <a class="profile-social" href={`mailto:${site.email}`} aria-label="邮箱" title="邮箱">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                <path
+                  fill="currentColor"
+                  d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5L4 8V6l8 5 8-5v2z"
+                ></path>
+              </svg>
+            </a>
+            <a class="profile-social" href="/about/" aria-label="关于我" title="关于我">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                <path
+                  fill="currentColor"
+                  d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+                ></path>
+              </svg>
+            </a>
+            <a class="profile-social" href="/contact/" aria-label="联系" title="联系">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                <path
+                  fill="currentColor"
+                  d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"
+                ></path>
+              </svg>
+            </a>
+            <a class="profile-social" href="/posts/" aria-label="文章" title="文章">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                <path
+                  fill="currentColor"
+                  d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"
+                ></path>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 桌面端播放器停靠位；实际节点由全局 MusicPlayer 移入，切页不断播 -->
+      <div class="music-player-slot" data-music-slot></div>
+    </section>
+
+    <section class="bento" aria-label="首页精选">
+      <div class="bento-cat">
+        <BentoCarousel slides={bentoImages.carousel} />
+      </div>
+
+      <div class="bento-main">
+        {
+          featuredPost ? (
+            <a
+              class:list={['bento-feature', featureImage && 'has-image']}
+              href={`/posts/${featuredPost.summary.id}/`}
+              style={featureImage ? `--card-image: url('${featureImage}')` : undefined}
+            >
+              {featureImage && <span class="bento-media" aria-hidden="true"></span>}
+              <div class="bento-copy">
+                <p class="bento-label">最新</p>
+                <h2>{featuredPost.summary.title}</h2>
+                <p class="bento-desc">{featuredPost.summary.description}</p>
+                <p class="bento-meta">
+                  <time datetime={featuredPost.summary.date}>{formatDate(featuredPost.summary.date)}</time>
+                  <span aria-hidden="true">·</span>
+                  <span>约 {featuredPost.minutes} 分钟</span>
+                </p>
+              </div>
+            </a>
+          ) : (
+            <div class="bento-feature is-empty">
+              <div class="bento-copy">
+                <p class="bento-label">最新</p>
+                <h2>还没有文章</h2>
+                <p class="bento-desc">第一篇正在写。</p>
+              </div>
+            </div>
+          )
+        }
+
+        <div class="bento-tiles" aria-label="项目">
+          {
+            tileFill.map((tile) => (
+              <a
+                class:list={[
+                  'bento-tile',
+                  'bento-tile-project',
+                  tile.image && 'has-image',
+                  tile.empty && 'is-empty',
+                ]}
+                href={tile.href}
+                target={tile.external ? '_blank' : undefined}
+                rel={tile.external ? 'noopener noreferrer' : undefined}
+                style={tile.image ? `--card-image: url('${tile.image}')` : undefined}
+              >
+                {tile.image && <span class="bento-media" aria-hidden="true"></span>}
+                <div class="bento-caption">
+                  <span class="bento-tile-meta">{tile.meta}</span>
+                  <strong>{tile.title}</strong>
+                  {tile.blurb && <p class="bento-tile-blurb">{tile.blurb}</p>}
+                </div>
+              </a>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="posts-heading">
+      <div class="section-head">
+        <div>
+          <h2 id="posts-heading">最近写的</h2>
+        </div>
+        <a href="/posts/">看全部</a>
+      </div>
+      {
+        listPostsHome.length === 0 ? (
+          <p class="empty-state">还没写完。真的，已经在写了。</p>
+        ) : (
+          <div class="post-grid">
+            {listPostsHome.map(({ summary, markdown, cover }) => (
+              <PostCard
+                href={`/posts/${summary.id}/`}
+                title={summary.title}
+                description={summary.description}
+                date={summary.date}
+                markdown={markdown}
+                cover={cover}
+              />
+            ))}
+          </div>
+        )
+      }
+    </section>
+
+    <section class="section" aria-labelledby="docs-heading">
+      <div class="section-head">
+        <div>
+          <h2 id="docs-heading">技术文档</h2>
+        </div>
+        <a href="/docs/">看全部</a>
+      </div>
+      {
+        listDocsHome.length === 0 ? (
+          <p class="empty-state">还没有文档。步骤写清了再放这里。</p>
+        ) : (
+          <div class="post-grid">
+            {listDocsHome.map(({ summary, markdown, cover }) => (
+              <PostCard
+                href={`/docs/${summary.id}/`}
+                title={summary.category ? `${summary.category} · ${summary.title}` : summary.title}
+                description={summary.description}
+                date={summary.date}
+                markdown={markdown}
+                more="打开文档"
+                cover={cover}
+              />
+            ))}
+          </div>
+        )
+      }
+    </section>
+
+    <section class="section" aria-labelledby="shares-heading">
+      <div class="section-head">
+        <div>
+          <h2 id="shares-heading">内容分享</h2>
+        </div>
+        <a href="/shares/">看全部</a>
+      </div>
+      {
+        sharesHome.length === 0 ? (
+          <p class="empty-state">还没有外链。别人写得好，就转一链过来。</p>
+        ) : (
+          <div class="share-list">
+            {sharesHome.map((share) => {
+              const image = share.image;
+              return (
+                <a
+                  class:list={['share-card', image && 'has-image']}
+                  href={share.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={image ? `--card-image: url('${image}')` : undefined}
+                >
+                  {image && <span class="share-card-media" aria-hidden="true"></span>}
+                  <div class="share-card-body">
+                    <div class="share-card-top">
+                      <time datetime={share.date}>{formatDate(share.date)}</time>
+                      <span class="share-source">{share.source ?? shareHost(share.url)}</span>
+                    </div>
+                    <strong>{share.title}</strong>
+                    {share.description && <p class="card-blurb">{share.description}</p>}
+                    <span class="share-go">去看原文</span>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        )
+      }
+    </section>
+
+    <section class="section" aria-labelledby="notes-heading">
+      <div class="section-head">
+        <div>
+          <h2 id="notes-heading">闲聊碎碎念</h2>
+        </div>
+        <a href="/notes/">还有</a>
+      </div>
+      {
+        notes.length === 0 ? (
+          <p class="empty-state">脑子里有，键盘上还没有。</p>
+        ) : (
+          <div class="note-list">
+            {notes.map((note) => (
+              <article class="note-card">
+                <time datetime={note.date}>{formatDate(note.date)}</time>
+                <div class="note-body">
+                  <MarkdownBody markdown={note.markdown} class="note-body" />
+                </div>
+              </article>
+            ))}
+          </div>
+        )
+      }
+    </section>
+
+    <section class="section" aria-labelledby="project-heading">
+      <div class="section-head">
+        <div>
+          <h2 id="project-heading">修修补补中</h2>
+        </div>
+        <a href="/projects/">全部</a>
+      </div>
+      <div class="project-grid">
+        {
+          projectsHome.map((project) => {
+            const image = project.image;
+            return (
+              <a
+                class:list={['project-card', image && 'has-image']}
+                href={`/projects/${project.id}/`}
+                style={image ? `--card-image: url('${image}')` : undefined}
+              >
+                {image && <span class="project-card-media" aria-hidden="true"></span>}
+                <div class="project-card-body">
+                  <div class="project-card-top">
+                    <strong>{project.name}</strong>
+                    <span class="status">{project.status}</span>
+                  </div>
+                  {project.blurb && <p class="card-blurb">{project.blurb}</p>}
+                </div>
+              </a>
+            );
+          })
+        }
+      </div>
+    </section>
+  </main>
+</BaseLayout>

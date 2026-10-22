@@ -1,0 +1,60 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/PageHero.astro';
+import MarkdownBody from '../../components/MarkdownBody.astro';
+import { listShares } from '../../lib/api';
+import { formatDate } from '../../lib/format';
+
+const shares = await listShares();
+
+function hostname(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+---
+
+<BaseLayout title="分享" description="分享一些好的学习">
+  <main class="shell">
+    <PageHero
+      title="分享"
+      lead={
+        shares.length === 0
+          ? undefined
+          : '分享一些好的学习'
+      }
+    />
+
+    {
+      shares.length === 0 ? (
+        <p class="empty-state">还没有外链。</p>
+      ) : (
+        <div class="share-list">
+          {shares.map((share) => (
+            <a
+              class="share-card"
+              href={share.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <div class="share-card-top">
+                <time datetime={share.date}>{formatDate(share.date)}</time>
+                <span class="share-source">{share.source ?? hostname(share.url)}</span>
+              </div>
+              <strong>{share.title}</strong>
+              <p>{share.description}</p>
+              {share.markdown?.trim() && (
+                <div class="share-note">
+                  <MarkdownBody markdown={share.markdown} class="share-note" />
+                </div>
+              )}
+              <span class="share-go">去看原文</span>
+            </a>
+          ))}
+        </div>
+      )
+    }
+  </main>
+</BaseLayout>

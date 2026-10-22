@@ -1,0 +1,63 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/PageHero.astro';
+import PostCard from '../../components/PostCard.astro';
+import { getPost, getSite, listPosts } from '../../lib/api';
+
+const site = await getSite();
+const summaries = await listPosts();
+const posts = await Promise.all(
+  summaries.map(async (summary) => {
+    const detail = await getPost(summary.id);
+    return { summary, markdown: detail?.markdown ?? '' };
+  }),
+);
+const count = posts.length;
+---
+
+<BaseLayout title="写过的" description={`${site.name} 写过的东西：踩坑、复盘和随笔。`}>
+  <main class="shell">
+    <PageHero
+      kicker="文章"
+      title="写过的"
+      lead={
+        count === 0
+          ? undefined
+          : `一共 ${count} 篇。多半是踩完坑才动笔，随便翻。`
+      }
+    />
+
+    {
+      count > 0 && (
+        <p class="tag-back">
+          <a href="/tags/">按标签看</a>
+          <span aria-hidden="true">·</span>
+          <a href="/rss.xml">RSS</a>
+        </p>
+      )
+    }
+
+    {
+      count === 0 ? (
+        <p class="empty-state">
+          还没写完。
+          <br />
+          真的，已经在写了。
+        </p>
+      ) : (
+        <div class="post-grid">
+          {posts.map(({ summary, markdown }) => (
+            <PostCard
+              href={`/posts/${summary.id}/`}
+              title={summary.title}
+              description={summary.description}
+              date={summary.date}
+              markdown={markdown}
+              cover={summary.cover}
+            />
+          ))}
+        </div>
+      )
+    }
+  </main>
+</BaseLayout>

@@ -1,0 +1,48 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/PageHero.astro';
+import PostCard from '../../components/PostCard.astro';
+import { listPosts } from '../../lib/api';
+import { collectTags } from '../../lib/posts';
+
+export async function getStaticPaths() {
+  const posts = await listPosts();
+  return collectTags(posts).map((tag) => ({
+    params: { tag },
+  }));
+}
+
+const tag = Astro.params.tag!;
+const all = await listPosts();
+const posts = all.filter((p) => (p.tags ?? []).includes(tag));
+---
+
+<BaseLayout title={`标签 · ${tag}`} description={`带「${tag}」标签的文章`} noindex>
+  <main class="shell">
+    <PageHero title={`# ${tag}`} lead={`共 ${posts.length} 篇。`} />
+
+    <p class="tag-back">
+      <a href="/tags/">全部标签</a>
+      <span aria-hidden="true">·</span>
+      <a href="/posts/">文章列表</a>
+    </p>
+
+    {
+      posts.length === 0 ? (
+        <p class="empty-state">这个标签下还没有文章。</p>
+      ) : (
+        <div class="post-grid">
+          {posts.map((summary) => (
+            <PostCard
+              href={`/posts/${summary.id}/`}
+              title={summary.title}
+              description={summary.description}
+              date={summary.date}
+              cover={summary.cover}
+            />
+          ))}
+        </div>
+      )
+    }
+  </main>
+</BaseLayout>

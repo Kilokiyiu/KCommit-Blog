@@ -1,0 +1,168 @@
+---
+import { ClientRouter } from 'astro:transitions';
+import '../styles/global.css';
+import MusicPlayer from '../components/MusicPlayer.astro';
+import NavIcon from '../components/NavIcon.astro';
+import { getSite } from '../lib/api';
+import { nav, site as siteConfig } from '../site';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** Open Graph / 分享图，默认用头像 */
+  image?: string;
+  /** og:type，文章页用 article */
+  ogType?: 'website' | 'article';
+  /** 文章发布时间（ISO） */
+  publishedTime?: string;
+  /** 给标签页等：noindex */
+  noindex?: boolean;
+  /** 额外 JSON-LD 对象 */
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+  /** 附加到 body 的 class，如友链全屏星空 */
+  bodyClass?: string;
+}
+
+const site = await getSite();
+const {
+  title,
+  description = site.description,
+  image = site.avatar,
+  ogType = 'website',
+  publishedTime,
+  noindex = false,
+  jsonLd,
+  bodyClass = '',
+} = Astro.props;
+
+const pageTitle = title ? `${title} · ${site.name}` : `${site.name} · ${site.tagline}`;
+const pathname = Astro.url.pathname;
+const canonical = new URL(pathname, Astro.site ?? 'https://example.com').href;
+const ogImage = new URL(image, Astro.site ?? 'https://example.com').href;
+
+const jsonLdBlocks = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="author" content={site.name} />
+    {noindex && <meta name="robots" content="noindex, follow" />}
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" type="application/rss+xml" title={`${site.name} RSS`} href="/rss.xml" />
+
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:site_name" content={site.name} />
+    {publishedTime && <meta property="article:published_time" content={publishedTime} />}
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    <link rel="icon" type="image/png" href={site.favicon} sizes="48x48" />
+    <link rel="icon" type="image/png" href="/favicon-32.png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700&family=Nunito+Sans:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <title>{pageTitle}</title>
+    <ClientRouter />
+
+    {
+      jsonLdBlocks.map((block) => (
+        <script type="application/ld+json" set:html={JSON.stringify(block)} />
+      ))
+    }
+  </head>
+  <body
+    class={bodyClass || undefined}
+    style={`--bg-photo: url('${site.backgroundImage}'); --bg-photo-mobile: url('${site.backgroundImageMobile}');`}
+  >
+    <div class="bg-photo" aria-hidden="true"></div>
+
+    <div class="header-wrap">
+      <button type="button" class="nav-backdrop" data-nav-backdrop aria-label="关闭菜单" tabindex="-1"></button>
+      <header class="site-header" id="site-header">
+        <a class="brand" href="/">
+          <img class="brand-mark" src={site.avatar} alt="" width="32" height="32" />
+          {site.name}
+        </a>
+        <button
+          class="nav-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="site-nav"
+          aria-label="菜单"
+        >
+          <span class="nav-toggle-bars" aria-hidden="true"></span>
+        </button>
+        <nav class="nav" id="site-nav" aria-label="主导航">
+          {
+            nav.map((item) => (
+              <a href={item.href} aria-current={item.match(pathname) ? 'page' : undefined}>
+                <NavIcon name={item.icon} />
+                <span>{item.label}</span>
+              </a>
+            ))
+          }
+        </nav>
+      </header>
+    </div>
+
+    <slot />
+
+    <footer class="site-footer">
+      <span>{site.name} · {new Date().getFullYear()}</span>
+      <span>本站基于 Astro 搭建。踩坑过几次，还会继续踩的。</span>
+      <a href="/rss.xml">RSS</a>
+      <a href={`https://github.com/${site.githubUser}`} target="_blank" rel="noopener noreferrer">代码</a>
+      <a href={`mailto:${site.email}`}>写信</a>
+      <a href="/about/">关于我</a>
+    </footer>
+
+    <MusicPlayer tracks={siteConfig.playlist} />
+
+    <script>
+      function bindSiteNav() {
+        const header = document.getElementById('site-header');
+        const toggle = header?.querySelector('.nav-toggle');
+        const navEl = document.getElementById('site-nav');
+        const backdrop = document.querySelector<HTMLElement>('[data-nav-backdrop]');
+        if (!header || !toggle || header.dataset.navBound === '1') return;
+        header.dataset.navBound = '1';
+
+        const setNavOpen = (open: boolean) => {
+          header.classList.toggle('is-open', open);
+          document.body.classList.toggle('nav-open', open);
+          toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+          toggle.setAttribute('aria-label', open ? '收起' : '菜单');
+        };
+
+        toggle.addEventListener('click', () => {
+          setNavOpen(!header.classList.contains('is-open'));
+        });
+
+        backdrop?.addEventListener('click', () => setNavOpen(false));
+
+        navEl?.querySelectorAll('a').forEach((link) => {
+          link.addEventListener('click', () => setNavOpen(false));
+        });
+      }
+
+      bindSiteNav();
+      document.addEventListener('astro:page-load', bindSiteNav);
+    </script>
+  </body>
+</html>

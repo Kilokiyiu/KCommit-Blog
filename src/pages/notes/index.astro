@@ -1,0 +1,67 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/PageHero.astro';
+import MarkdownBody from '../../components/MarkdownBody.astro';
+import { listNotes } from '../../lib/api';
+import { formatDate } from '../../lib/format';
+
+const notes = await listNotes();
+const count = notes.length;
+
+function monthKey(iso: string) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function monthLabel(key: string) {
+  const [y, m] = key.split('-').map(Number);
+  return new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'long' }).format(
+    new Date(y, m - 1, 1),
+  );
+}
+
+const groups = new Map<string, typeof notes>();
+for (const note of notes) {
+  const key = monthKey(note.date);
+  const list = groups.get(key) ?? [];
+  list.push(note);
+  groups.set(key, list);
+}
+const orderedGroups = [...groups.entries()];
+---
+
+<BaseLayout title="说说" description="脑子空空">
+  <main class="shell narrow">
+    <PageHero
+      kicker="碎碎念"
+      title="说说"
+      lead="脑子空空"
+    />
+
+    {
+      count === 0 ? (
+        <p class="empty-state">脑子空空。</p>
+      ) : (
+        <div class="note-months">
+          {orderedGroups.map(([key, items]) => (
+            <section class="note-month" aria-labelledby={`note-month-${key}`}>
+              <h2 class="note-month-title" id={`note-month-${key}`}>
+                {monthLabel(key)}
+              </h2>
+              <div class="note-list note-list-page">
+                {items.map((note) => (
+                  <article class="note-card">
+                    <time datetime={note.date}>{formatDate(note.date, 'long')}</time>
+                    <div class="note-body">
+                      <MarkdownBody markdown={note.markdown} class="note-body" />
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )
+    }
+  </main>
+</BaseLayout>

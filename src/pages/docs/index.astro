@@ -1,0 +1,71 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/PageHero.astro';
+import { listDocs } from '../../lib/api';
+import { formatDate } from '../../lib/format';
+
+const docs = await listDocs();
+const count = docs.length;
+
+const groups = new Map<string, typeof docs>();
+for (const doc of docs) {
+  const key = doc.category?.trim() || '未分组';
+  const list = groups.get(key) ?? [];
+  list.push(doc);
+  groups.set(key, list);
+}
+
+const orderedGroups = [...groups.entries()].sort(([a], [b]) => {
+  if (a === '本站') return -1;
+  if (b === '本站') return 1;
+  if (a === '未分组') return 1;
+  if (b === '未分组') return -1;
+  return a.localeCompare(b, 'zh-CN');
+});
+---
+
+<BaseLayout title="技术文档" description="能照着做的说明：配置、步骤、怎么跑起来。">
+  <main class="shell">
+    <PageHero
+      kicker="文档"
+      title="技术文档"
+      lead={
+        count === 0
+          ? undefined
+          : `一共 ${count} 篇。配置、步骤、怎么跑起来——写不清就算了，先能照着做。`
+      }
+    />
+
+    {
+      count === 0 ? (
+        <p class="empty-state">还没有文档。</p>
+      ) : (
+        <div class="doc-groups">
+          {orderedGroups.map(([category, items]) => (
+            <section class="doc-group" aria-labelledby={`doc-group-${category}`}>
+              <h2 class="doc-group-title" id={`doc-group-${category}`}>
+                {category}
+                <span class="doc-group-count">{items.length}</span>
+              </h2>
+              <ul class="doc-list">
+                {items.map((doc) => (
+                  <li>
+                    <a class="doc-row" href={`/docs/${doc.id}/`}>
+                      <div class="doc-row-main">
+                        <strong>{doc.title}</strong>
+                        {doc.description && <span class="doc-row-desc">{doc.description}</span>}
+                      </div>
+                      <time class="doc-row-date" datetime={doc.date}>
+                        {formatDate(doc.date)}
+                      </time>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )
+    }
+  </main>
+</BaseLayout>

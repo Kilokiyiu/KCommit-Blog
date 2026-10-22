@@ -1,0 +1,249 @@
+---
+interface Slide {
+  type: 'blessing' | 'image';
+  image?: string;
+  href?: string;
+  kicker?: string;
+  /** 图片卡文案；祝福卡里是编辑器注释 */
+  text?: string;
+  /** 祝福卡下方文字区（和编辑器里的预祝分开） */
+  caption?: string;
+}
+
+interface Props {
+  slides: Slide[];
+  /** 自动切换间隔（毫秒） */
+  interval?: number;
+}
+
+const { slides, interval = 4500 } = Astro.props;
+
+const artLines = [
+  '    ∧___∧ ♡                  /\\______/\\',
+  '   ( ˘ ω ˘ )                  / o      o \\  ♡ ',
+  '   {  つ つ}  *               ( ==  ^  == )  *',
+  '   し─J  L─J                  )           (',
+  '                             (             )',
+  '                             ( (  )    (  ) )',
+  '                             (__(__)___(__)_)',
+];
+
+const safeSlides = slides.filter((s) => s.type === 'blessing' || Boolean(s.image));
+---
+
+{
+  safeSlides.length > 0 && (
+    <div
+      class="bento-carousel"
+      data-bento-carousel
+      data-interval={String(interval)}
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="精选轮播"
+    >
+      <div class="bento-carousel-viewport">
+        {safeSlides.map((slide, i) => {
+          const isBlessing = slide.type === 'blessing';
+          const kicker = slide.kicker ?? (isBlessing ? '小猫祝福' : '看看');
+          const className = [
+            'bento-carousel-slide',
+            isBlessing ? 'is-blessing is-editor' : 'is-image',
+            slide.image ? 'has-image' : '',
+            i === 0 ? 'is-active' : '',
+          ]
+            .filter(Boolean)
+            .join(' ');
+          const style = slide.image ? `--slide-image: url('${slide.image}')` : undefined;
+          const external = Boolean(slide.href?.startsWith('http'));
+
+          const editorWish = slide.text ?? '预祝：代码跑通无 BUG !!。';
+          const captionText = slide.caption ?? '两只小猫来站台了。';
+
+          const inner = isBlessing ? (
+            <>
+              <div class="code-editor">
+                <div class="code-editor-chrome">
+                  <span class="code-dots" aria-hidden="true">
+                    <i></i>
+                    <i></i>
+                    <i></i>
+                  </span>
+                  <span class="code-tab">blessing.txt</span>
+                </div>
+                <div class="code-editor-body">
+                  <div class="code-gutter" aria-hidden="true">
+                    {artLines.map((_, n) => (
+                      <span>{n + 1}</span>
+                    ))}
+                    <span>{artLines.length + 1}</span>
+                    <span>{artLines.length + 2}</span>
+                  </div>
+                  <div class="code-source">
+                    <pre class="bento-carousel-art">{artLines.join('\n')}</pre>
+                    <p class="code-blank" aria-hidden="true">
+                      {' '}
+                    </p>
+                    <p class="code-comment">// {editorWish}</p>
+                  </div>
+                </div>
+              </div>
+              <div class="bento-caption">
+                <p class="bento-carousel-kicker">{kicker}</p>
+                <p class="bento-carousel-text">{captionText}</p>
+              </div>
+            </>
+          ) : (
+            <>
+              {slide.image && <span class="bento-carousel-media" aria-hidden="true"></span>}
+              <div class="bento-caption">
+                {(slide.caption ?? slide.text) && (
+                  <p class="bento-carousel-text">{slide.caption ?? slide.text}</p>
+                )}
+              </div>
+            </>
+          );
+
+          return slide.href ? (
+            <a
+              class={className}
+              href={slide.href}
+              target={external ? '_blank' : undefined}
+              rel={external ? 'noopener noreferrer' : undefined}
+              style={style}
+              data-slide
+              aria-hidden={i === 0 ? 'false' : 'true'}
+              tabindex={i === 0 ? 0 : -1}
+              aria-label={
+                isBlessing
+                  ? kicker
+                  : (slide.caption ?? slide.text ?? kicker)
+              }
+            >
+              {inner}
+            </a>
+          ) : (
+            <div class={className} style={style} data-slide aria-hidden={i === 0 ? 'false' : 'true'}>
+              {inner}
+            </div>
+          );
+        })}
+      </div>
+
+      {
+        safeSlides.length > 1 && (
+          <>
+            <div class="bento-carousel-nav">
+              <button type="button" class="bento-carousel-btn" data-carousel-prev aria-label="上一张">
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                  <path fill="currentColor" d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z"></path>
+                </svg>
+              </button>
+              <button type="button" class="bento-carousel-btn" data-carousel-next aria-label="下一张">
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                  <path fill="currentColor" d="M9.999 6 8.599 7.4 13.2 12l-4.6 4.6L10 18l6-6z"></path>
+                </svg>
+              </button>
+            </div>
+            <div class="bento-carousel-dots" role="tablist" aria-label="轮播页">
+              {safeSlides.map((_, i) => (
+                <button
+                  type="button"
+                  class:list={['bento-carousel-dot', i === 0 && 'is-active']}
+                  data-carousel-dot
+                  data-index={String(i)}
+                  role="tab"
+                  aria-selected={i === 0 ? 'true' : 'false'}
+                  aria-label={`第 ${i + 1} 张`}
+                />
+              ))}
+            </div>
+          </>
+        )
+      }
+    </div>
+  )
+}
+
+<script>
+  function initCarousel(root: HTMLElement) {
+    if (root.dataset.carouselReady === '1') return;
+    root.dataset.carouselReady = '1';
+
+    const slides = Array.from(root.querySelectorAll<HTMLElement>('[data-slide]'));
+    if (slides.length < 2) return;
+
+    const dots = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-carousel-dot]'));
+    const prevBtn = root.querySelector<HTMLButtonElement>('[data-carousel-prev]');
+    const nextBtn = root.querySelector<HTMLButtonElement>('[data-carousel-next]');
+    const intervalMs = Number(root.dataset.interval) || 4500;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    let index = 0;
+    let timer: number | undefined;
+
+    const show = (next: number) => {
+      index = (next + slides.length) % slides.length;
+      slides.forEach((slide, i) => {
+        const on = i === index;
+        slide.classList.toggle('is-active', on);
+        slide.setAttribute('aria-hidden', on ? 'false' : 'true');
+        if ('tabIndex' in slide) slide.tabIndex = on ? 0 : -1;
+      });
+      dots.forEach((dot, i) => {
+        const on = i === index;
+        dot.classList.toggle('is-active', on);
+        dot.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+    };
+
+    const stop = () => {
+      if (timer !== undefined) {
+        window.clearInterval(timer);
+        timer = undefined;
+      }
+    };
+
+    const start = () => {
+      if (reduceMotion) return;
+      stop();
+      timer = window.setInterval(() => show(index + 1), intervalMs);
+    };
+
+    prevBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      show(index - 1);
+      start();
+    });
+    nextBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      show(index + 1);
+      start();
+    });
+    dots.forEach((dot) => {
+      dot.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        show(Number(dot.dataset.index) || 0);
+        start();
+      });
+    });
+
+    root.addEventListener('mouseenter', stop);
+    root.addEventListener('mouseleave', start);
+    root.addEventListener('focusin', stop);
+    root.addEventListener('focusout', (e) => {
+      if (!root.contains(e.relatedTarget as Node | null)) start();
+    });
+
+    start();
+  }
+
+  function boot() {
+    document.querySelectorAll<HTMLElement>('[data-bento-carousel]').forEach(initCarousel);
+  }
+
+  boot();
+  document.addEventListener('astro:page-load', boot);
+</script>

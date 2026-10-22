@@ -1,0 +1,29 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import { getSite } from '../lib/api';
+
+const site = await getSite();
+---
+
+<BaseLayout title="关于" description={`关于 ${site.name}`}>
+  <main class="shell narrow">
+    <PageHero title="关于" lead="写这个的人。" />
+
+    <div class="glass-panel about-panel">
+      <div class="about-layout">
+        <img class="about-avatar" src={site.avatar} alt={`${site.name} 的头像`} width="120" height="120" />
+        <div class="prose">
+          {site.about.paragraphs.map((p) => <p>{p}</p>)}
+          <p>
+            也可以看看
+            <a href="/projects/">项目</a>、
+            <a href="/posts/">文章</a>
+            或直接
+            <a href="/contact/">联系</a>。
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+</BaseLayout>
