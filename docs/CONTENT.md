@@ -81,11 +81,66 @@ image: /img/shares/….png # 可选
 ---
 ```
 
+**文档 `docs`**
+
+```md
+---
+title: 标题
+description: 一句话摘要
+date: 2026-10-20
+category: 本站            # 可选
+cover: /img/covers/your-slug.png  # 可选
+draft: false              # 可选
+---
+
+正文里插图请用站点根路径，例如：
+
+![步骤截图](/img/docs/your-slug/step-1.png)
+```
+
 ---
 
 ## 4. 图片与静态资源
 
-文件放 `public/`，路径以 `/` 开头写在 frontmatter 或 `site.ts`。
+### 4.1 为什么推上去图片不显示？
+
+本站是 **Astro 静态站**：浏览器只能请求到 `public/` 下的文件。  
+Markdown 写在 `src/content/**`，**不会**把旁边的图片自动拷到线上。
+
+| 错误做法 | 结果 |
+|:--|:--|
+| 图和 `.md` 放一起，写 `![](./shot.png)` | 本地编辑器可能能预览，线上 404 |
+| 写 Windows 绝对路径 / `file:///...` | 只有你电脑能打开 |
+| 只 `git add` 了 `.md`，忘了加 `public/img/...` | 仓库里有文、无线上图 |
+| 用管理端「发布」但图不在白名单目录 | 文推上去了、图没进提交（见 §6） |
+
+### 4.2 正确写法（正文插图）
+
+1. 把图片放到 `public/` 下，例如：  
+   `public/img/docs/getting-started/arch.png`
+2. 在 Markdown **正文**里用**以站点根开头**的路径（注意前导 `/`）：
+
+```md
+![架构示意](/img/docs/getting-started/arch.png)
+```
+
+对应关系永远是：
+
+```text
+Markdown 里的 /img/...     →     磁盘上的 public/img/...
+```
+
+文档 / 文章建议按 slug 分子目录，避免文件名撞车：
+
+| 内容类型 | 建议目录 |
+|:--|:--|
+| 文档正文图 | `public/img/docs/{slug}/` |
+| 文章正文图 | `public/img/posts/{slug}/` |
+| 说说附图 | `public/img/notes/`（可选） |
+
+### 4.3 Frontmatter / 站点配置用图
+
+文件仍放 `public/`，路径以 `/` 开头写在 frontmatter 或 `site.ts`。
 
 | 用途 | 建议路径 |
 |:--|:--|
@@ -94,13 +149,19 @@ image: /img/shares/….png # 可选
 | 背景 | `site.backgroundImage` / `backgroundImageMobile` |
 | 默认封面 | `/img/covers/default.png` |
 | 文章封面 | `/img/covers/{slug}.png` |
+| 文档封面 | `/img/covers/{slug}.png`（与文章共用 covers） |
 | 项目图 | `/img/projects/{slug}.png` |
 | 分享图 | `/img/shares/…` |
 | 首页轮播 | `/img/bento/…`（四季墙等） |
 | 友链星座 | `/img/friends/zodiac*`（主题素材，一般不动） |
 | 音乐 | `/music/xxx.mp3` + `site.playlist` |
 
-命名建议 kebab-case；缺文件会破图，先放占位再精修。
+命名建议 kebab-case（尽量别用空格）；缺文件会破图，先放占位再精修。
+
+### 4.4 自检清单
+
+推送前本地执行 `npm run build`，打开 `npm run preview`，点进带图的页面看是否裂图。  
+或直接打开 `https://你的域名/img/docs/...`，能打开说明文件已在 `public` 且已部署。
 
 ---
 
@@ -126,8 +187,9 @@ image: /img/shares/….png # 可选
 
 ```bash
 npm run admin
-# 或双击 admin/Start.bat
 ```
+
+Windows 推荐双击仓库里的 **`admin/Start.bat`**（自动打开浏览器；关掉黑窗口即停止）。
 
 打开 http://127.0.0.1:4322 （**仅本机**）：
 
@@ -135,13 +197,15 @@ npm run admin
 |:--|:--|
 | 列表 / 编辑 / 删除 | posts · notes · docs · shares · projects |
 | 导入 Markdown | 选本地 `.md`，自动填正文与 frontmatter，再改配置后保存 |
-| 配图上传 | 写入 `public/img/covers|shares|projects/`，并回填路径 |
-| 发布上线 | 提交 `src/content/**` 与相关配图 → `git push` → Pages 自动构建 |
+| 配图上传 | 当前按钮主要写入 `public/img/covers|shares|projects/`，并回填封面字段 |
+| 发布上线 | 默认提交 `src/content/**` 以及 `public/img/covers|shares|projects/**` |
 
 注意：
 
 - 保存只写本地磁盘；线上要变必须「提交并推送」（或你自己 `git push`）
-- 发布不会带上 `.env`、管理端源码等；仅内容与配图
+- **正文插图**若放在 `public/img/docs/`、`public/img/posts/` 等目录：管理端一键发布**可能不会自动带上**；请用终端自行加入后推送，例如：  
+  `git add src/content public/img && git commit -m "…" && git push`
+- 发布不会带上 `.env` 等敏感文件
 - 本机需已配置好 Git 远程与推送凭据（与平时 `git push` 相同）
 - `site.ts`（关于 / 友链 / 歌单等）仍建议手改；管理端暂不覆盖
 

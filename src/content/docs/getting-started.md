@@ -2,7 +2,7 @@
 title: 开始使用
 description: 部署骨架与仓库文档入口。
 date: 2026-10-22
-tags: [入门]
+category: 本站
 ---
 
 完整说明在仓库文档（GitHub / 本地 `docs/`），不在本页展开。
