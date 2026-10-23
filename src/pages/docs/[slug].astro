@@ -2,7 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import MarkdownBody from '../../components/MarkdownBody.astro';
 import { getDoc, listDocs } from '../../lib/api';
-import { formatDate, readingMinutes } from '../../lib/format';
+import { formatDate, formatRelativeTime } from '../../lib/format';
 
 export async function getStaticPaths() {
   const docs = await listDocs();
@@ -24,7 +24,6 @@ const pool = sameCategory.length > 1 ? sameCategory : all;
 const index = pool.findIndex((d) => d.id === slug);
 const prev = index >= 0 && index < pool.length - 1 ? pool[index + 1] : null;
 const next = index > 0 ? pool[index - 1] : null;
-const minutes = readingMinutes(doc.markdown);
 ---
 
 <BaseLayout title={doc.title} description={doc.description}>
@@ -44,7 +43,7 @@ const minutes = readingMinutes(doc.markdown);
           }
           <time datetime={doc.date}>{formatDate(doc.date, 'long')}</time>
           <span aria-hidden="true">·</span>
-          <span>约 {minutes} 分钟</span>
+          <span data-relative-time datetime={doc.date}>{formatRelativeTime(doc.date)}</span>
         </p>
         <h1>{doc.title}</h1>
         {doc.description && <p class="read-desc">{doc.description}</p>}

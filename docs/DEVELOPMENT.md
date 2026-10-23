@@ -8,19 +8,21 @@
 
 ```bash
 npm install
-npm run dev       # 开发
+npm run dev       # 开发前台  http://localhost:4321
+npm run admin     # 本机写稿后台 http://127.0.0.1:4322
 npm run build     # 静态构建 → dist/
 npm run preview   # 预览构建结果
 ```
 
-可选：`npx wrangler pages dev dist` 模拟 Cloudflare Pages。
+可选：`npx wrangler pages dev dist` 模拟 Cloudflare Pages。  
+Windows 也可双击 `admin/Start.bat` 启动管理端。
 
-**本仓库当前 = 静态前端**：Astro 5 · Markdown（`marked`）· `@astrojs/rss` / `@astrojs/sitemap`。  
+**本仓库当前 = 静态前端 + 本机管理端**：Astro 5 · Markdown（`marked`）· `@astrojs/rss` / `@astrojs/sitemap` · `admin/`（Node 读写本地文件）。  
 （`.ts` / `.astro` 是前端工程语言，**不是**后端技术选型。）
 
-**近期前端**：补**管理页**（写文 / 管文）与**评论上线**；见 [ROADMAP.md](./ROADMAP.md)。  
+**近期前端**：评论上线（Giscus）；管理端已可本机写文 / 推送。见 [ROADMAP.md](./ROADMAP.md)。  
 
-**后端（后置）**：静态管理与评论就绪后，在本仓库新增 C# / ASP.NET Core（如 `backend/`），按 [API.md](./API.md) 提供 REST；前端再配 `PUBLIC_API_BASE_URL`。
+**后端（后置）**：评论与体验就绪后，在本仓库新增 C# / ASP.NET Core（如 `backend/`），按 [API.md](./API.md) 提供 REST；前端再配 `PUBLIC_API_BASE_URL`。管理端届时再从「改本地文件」迁到写 API。
 
 ---
 
@@ -36,6 +38,7 @@ npm run preview   # 预览构建结果
 | `src/content.config.ts` | Collection schema | 加字段要同步改 schema |
 | `src/lib/api/` | 统一取数 | 接远程时改这里与契约 |
 | `src/lib/*.ts` | 工具（markdown、日期、星座…） | 纯函数优先 |
+| `admin/` | 本机 CMS（Node + 静态 UI） | 只监听 127.0.0.1；勿部署到公网 |
 | `public/` | 原样拷贝的静态文件 | 大图、字体、音乐 |
 | `astro.config.mjs` | `site`、集成插件 | 加集成、改站点 URL |
 | `docs/` | 仓库文档 | 与站内 `src/content/docs` 无关 |

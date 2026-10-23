@@ -161,8 +161,41 @@ const jsonLdBlocks = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
         });
       }
 
+      function formatRelativeTime(iso: string, now = Date.now()) {
+        const value = new Date(iso).getTime();
+        if (Number.isNaN(value)) return '';
+        const diffMs = value - now;
+        const abs = Math.abs(diffMs);
+        const rtf = new Intl.RelativeTimeFormat('zh-CN', { numeric: 'auto' });
+        const minute = 60 * 1000;
+        const hour = 60 * minute;
+        const day = 24 * hour;
+        const week = 7 * day;
+        const month = 30 * day;
+        const year = 365 * day;
+        if (abs < minute) return '刚刚';
+        if (abs < hour) return rtf.format(Math.round(diffMs / minute), 'minute');
+        if (abs < day) return rtf.format(Math.round(diffMs / hour), 'hour');
+        if (abs < week) return rtf.format(Math.round(diffMs / day), 'day');
+        if (abs < month) return rtf.format(Math.round(diffMs / week), 'week');
+        if (abs < year) return rtf.format(Math.round(diffMs / month), 'month');
+        return rtf.format(Math.round(diffMs / year), 'year');
+      }
+
+      function bindRelativeTimes() {
+        document.querySelectorAll<HTMLElement>('[data-relative-time]').forEach((el) => {
+          const iso = el.getAttribute('datetime') || el.closest('time')?.getAttribute('datetime');
+          if (!iso) return;
+          el.textContent = formatRelativeTime(iso);
+        });
+      }
+
       bindSiteNav();
-      document.addEventListener('astro:page-load', bindSiteNav);
+      bindRelativeTimes();
+      document.addEventListener('astro:page-load', () => {
+        bindSiteNav();
+        bindRelativeTimes();
+      });
     </script>
   </body>
 </html>

@@ -1,5 +1,5 @@
 ---
-import { formatDate, readingMinutes } from '../lib/format';
+import { formatDate, formatRelativeTime } from '../lib/format';
 
 interface Props {
   href: string;
@@ -11,8 +11,7 @@ interface Props {
   cover?: string;
 }
 
-const { href, title, description, date, markdown = '', more = '看看写了啥', cover } = Astro.props;
-const minutes = readingMinutes(markdown);
+const { href, title, description, date, more = '看看写了啥', cover } = Astro.props;
 const iso = typeof date === 'string' ? date : date.toISOString();
 ---
 
@@ -21,7 +20,8 @@ const iso = typeof date === 'string' ? date : date.toISOString();
   <div class="post-card-body">
     <div class="post-card-meta">
       <time datetime={iso}>{formatDate(date)}</time>
-      <span>约 {minutes} 分钟</span>
+      <span aria-hidden="true">·</span>
+      <span data-relative-time datetime={iso}>{formatRelativeTime(date)}</span>
     </div>
     <h3>{title}</h3>
     {description && <p class="card-blurb">{description}</p>}

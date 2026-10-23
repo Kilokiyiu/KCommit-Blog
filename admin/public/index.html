@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>管理 · KCommit-Blog</title>
+    <link rel="icon" type="image/png" href="/site-img/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700&family=Nunito+Sans:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body
+    style="--bg-photo: url('/site-img/img/wallpaper/static/img_1.png'); --bg-photo-mobile: url('/site-img/img/wallpaper/static-mobile/0001/modile.png');"
+  >
+    <div class="bg-photo" aria-hidden="true"></div>
+
+    <div class="header-wrap">
+      <header class="site-header">
+        <div class="brand">
+          <img class="brand-mark" src="/site-img/img/avatar.png" alt="" width="32" height="32" />
+          <span>KCommit · 管理</span>
+        </div>
+        <nav id="collection-nav" class="nav" aria-label="内容类型"></nav>
+      </header>
+    </div>
+
+    <main class="shell narrow">
+      <section id="view-list">
+        <header class="page-hero">
+          <p class="hero-kicker" id="list-kicker">文章</p>
+          <h1 id="list-title">写过的</h1>
+          <p id="list-sub">点已有条目编辑；或导入本地 .md / 新建</p>
+        </header>
+
+        <div class="toolbar-actions">
+          <label class="btn btn-ghost upload-btn" for="field-import-md">导入 Markdown</label>
+          <input id="field-import-md" type="file" accept=".md,text/markdown,text/plain" hidden />
+          <button type="button" class="btn btn-primary" id="btn-new">新建</button>
+        </div>
+
+        <div id="list" class="list"></div>
+
+        <section class="glass-panel publish-panel" aria-label="发布">
+          <div class="publish-head">
+            <div>
+              <p class="hero-kicker">发布</p>
+              <h2>发布上线</h2>
+              <p class="publish-lead" id="publish-lead">保存后把内容提交并推送到 GitHub，Cloudflare Pages 会自动构建。</p>
+            </div>
+            <button type="button" class="btn btn-ghost" id="btn-publish-refresh">刷新状态</button>
+          </div>
+          <ul id="publish-files" class="publish-files"></ul>
+          <label class="field">
+            <span>提交说明</span>
+            <input id="field-commit-msg" type="text" placeholder="例如：写一篇：博客上线记录" autocomplete="off" />
+          </label>
+          <div class="toolbar-actions publish-actions">
+            <button type="button" class="btn btn-primary" id="btn-publish">提交并推送</button>
+          </div>
+          <p id="publish-status" class="status" role="status"></p>
+        </section>
+      </section>
+
+      <section id="view-editor" class="hidden">
+        <header class="page-hero">
+          <p class="hero-kicker">编辑</p>
+          <h1 id="editor-title">编辑</h1>
+        </header>
+
+        <div class="toolbar-actions editor-bar">
+          <button type="button" class="btn btn-ghost" id="btn-back">← 返回列表</button>
+          <div class="actions">
+            <button type="button" class="btn btn-ghost danger" id="btn-delete">删除</button>
+            <button type="button" class="btn btn-primary" id="btn-save">保存</button>
+          </div>
+        </div>
+
+        <div class="glass-panel editor-panel">
+          <form id="editor-form" class="form">
+            <label class="field">
+              <span>文件名（slug）</span>
+              <input id="field-slug" name="slug" required pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,120}" autocomplete="off" />
+            </label>
+            <div id="fields" class="fields"></div>
+
+            <div id="image-box" class="image-box hidden">
+              <label class="field">
+                <span id="image-label">配图</span>
+                <input id="field-image-path" type="text" placeholder="上传后自动填，也可手填 /img/..." />
+              </label>
+              <label class="btn btn-ghost upload-btn" for="field-image-file">上传图片</label>
+              <input id="field-image-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
+              <img id="image-preview" class="preview hidden" alt="" />
+            </div>
+
+            <label class="field body-field">
+              <span>正文 Markdown</span>
+              <textarea id="field-body" rows="18" spellcheck="false"></textarea>
+            </label>
+          </form>
+          <p id="status" class="status" role="status"></p>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

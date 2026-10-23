@@ -3,7 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import MarkdownBody from '../../components/MarkdownBody.astro';
 import Giscus from '../../components/Giscus.astro';
 import { getPost, listPosts, getSite } from '../../lib/api';
-import { formatDate, readingMinutes } from '../../lib/format';
+import { formatDate, formatRelativeTime } from '../../lib/format';
 import { relatedPosts, tagPath } from '../../lib/posts';
 
 export async function getStaticPaths() {
@@ -25,7 +25,6 @@ const all = await listPosts();
 const index = all.findIndex((p) => p.id === slug);
 const prev = index >= 0 && index < all.length - 1 ? all[index + 1] : null;
 const next = index > 0 ? all[index - 1] : null;
-const minutes = readingMinutes(post.markdown);
 const related = relatedPosts(post, all, 3);
 const cover = post.cover ?? site.avatar;
 
@@ -67,7 +66,7 @@ const jsonLd = {
         <p class="post-meta">
           <time datetime={post.date}>{formatDate(post.date, 'long')}</time>
           <span aria-hidden="true">·</span>
-          <span>约 {minutes} 分钟</span>
+          <span data-relative-time datetime={post.date}>{formatRelativeTime(post.date)}</span>
         </p>
         <h1>{post.title}</h1>
         {post.description && <p class="read-desc">{post.description}</p>}

@@ -3,7 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import PostCard from '../components/PostCard.astro';
 import MarkdownBody from '../components/MarkdownBody.astro';
 import BentoCarousel from '../components/BentoCarousel.astro';
-import { formatDate, readingMinutes } from '../lib/format';
+import { formatDate, formatRelativeTime } from '../lib/format';
 import { getDoc, getPost, getProjects, getSite, getStats, listDocs, listNotes, listPosts, listShares } from '../lib/api';
 import { site as siteConfig } from '../site';
 
@@ -35,7 +35,6 @@ const featuredPost = allPosts[0]
       return {
         summary: allPosts[0],
         markdown: detail?.markdown ?? '',
-        minutes: readingMinutes(detail?.markdown ?? ''),
       };
     })()
   : null;
@@ -203,7 +202,9 @@ const listDocsHome = await Promise.all(
                 <p class="bento-meta">
                   <time datetime={featuredPost.summary.date}>{formatDate(featuredPost.summary.date)}</time>
                   <span aria-hidden="true">·</span>
-                  <span>约 {featuredPost.minutes} 分钟</span>
+                  <span data-relative-time datetime={featuredPost.summary.date}>
+                    {formatRelativeTime(featuredPost.summary.date)}
+                  </span>
                 </p>
               </div>
             </a>

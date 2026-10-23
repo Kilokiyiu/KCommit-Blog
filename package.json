@@ -1,14 +1,15 @@
 {
   "name": "kcommit-blog",
   "private": false,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
-  "description": "Astro static blog theme for Cloudflare Pages. Markdown + site.ts; customize copy and images before shipping.",
+  "description": "Astro static blog theme for Cloudflare Pages. Markdown + site.ts + local admin; customize copy and images before shipping.",
   "license": "SEE LICENSE IN LICENSE",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "admin": "node admin/server.mjs"
   },
   "dependencies": {
     "@astrojs/rss": "^4.0.19",

@@ -120,8 +120,37 @@ image: /img/shares/….png # 可选
 
 ---
 
-## 6. 示例内容
+## 6. 本机管理端（写文 / 发布）
+
+不必手改 Markdown 时，可用本地管理端：
+
+```bash
+npm run admin
+# 或双击 admin/Start.bat
+```
+
+打开 http://127.0.0.1:4322 （**仅本机**）：
+
+| 能力 | 说明 |
+|:--|:--|
+| 列表 / 编辑 / 删除 | posts · notes · docs · shares · projects |
+| 导入 Markdown | 选本地 `.md`，自动填正文与 frontmatter，再改配置后保存 |
+| 配图上传 | 写入 `public/img/covers|shares|projects/`，并回填路径 |
+| 发布上线 | 提交 `src/content/**` 与相关配图 → `git push` → Pages 自动构建 |
+
+注意：
+
+- 保存只写本地磁盘；线上要变必须「提交并推送」（或你自己 `git push`）
+- 发布不会带上 `.env`、管理端源码等；仅内容与配图
+- 本机需已配置好 Git 远程与推送凭据（与平时 `git push` 相同）
+- `site.ts`（关于 / 友链 / 歌单等）仍建议手改；管理端暂不覆盖
+
+---
+
+## 7. 示例内容
 
 仓库自带欢迎帖、示例项目等，仅作结构参考。上线前请删除、改写或设 `draft: true`。
+
+文章卡片与详情页日期旁会显示**距今相对时间**（昨天 / 3 天前…），由浏览器按当前时间刷新。
 
 更多部署步骤见根目录 [README](../README.md)；改代码见 [DEVELOPMENT.md](./DEVELOPMENT.md)。
