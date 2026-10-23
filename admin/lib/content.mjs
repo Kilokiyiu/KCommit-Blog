@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { assertSafeSlug, getCollection } from './collections.mjs';
+import { ROOT, assertSafeSlug, getCollection } from './collections.mjs';
 import { parseMarkdownFile, stringifyMarkdownFile, toDateInput } from './frontmatter.mjs';
 
 async function ensureDir(dir) {
@@ -98,7 +98,37 @@ export async function deleteEntry(collectionId, slug) {
   const col = getCollection(collectionId);
   if (!col) throw new Error('未知集合');
   assertSafeSlug(slug);
+
+  let imagePath = '';
+  try {
+    const entry = await getEntry(collectionId, slug);
+    if (col.imageField && entry.frontmatter[col.imageField]) {
+      imagePath = String(entry.frontmatter[col.imageField]);
+    }
+  } catch {
+    // continue — still delete md if present
+  }
+
   await fs.unlink(mdPath(col, slug));
+
+  // Best-effort remove card/cover image
+  const candidates = new Set();
+  if (col.imageDir) {
+    for (const ext of ['.png', '.jpg', '.jpeg', '.webp', '.gif']) {
+      candidates.add(path.join(col.imageDir, `${slug}${ext}`));
+    }
+  }
+  if (imagePath.startsWith('/img/')) {
+    candidates.add(path.join(ROOT, 'public', imagePath.slice(1)));
+  }
+  for (const file of candidates) {
+    try {
+      await fs.unlink(file);
+    } catch {
+      // ignore missing
+    }
+  }
+
   return { ok: true };
 }
 

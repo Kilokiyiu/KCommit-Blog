@@ -32,6 +32,13 @@ function setStatus(msg, isError = false) {
   el.classList.toggle('error', Boolean(isError));
 }
 
+function setListStatus(msg, isError = false) {
+  const el = $('list-status');
+  if (!el) return;
+  el.textContent = msg || '';
+  el.classList.toggle('error', Boolean(isError));
+}
+
 function currentMeta() {
   return state.collections.find((c) => c.id === state.collectionId);
 }
@@ -70,7 +77,7 @@ async function loadList() {
   const meta = currentMeta();
   $('list-kicker').textContent = meta?.label || state.collectionId;
   $('list-title').textContent = PAGE_TITLES[state.collectionId] || meta?.label || state.collectionId;
-  $('list-sub').textContent = '点已有条目编辑；或导入本地 .md / 新建';
+  $('list-sub').textContent = '点标题编辑；右侧可直接删除。删本地后需底部「发布上线」才会从网站去掉。';
   const list = $('list');
   list.innerHTML = '<p class="empty">加载中…</p>';
   try {
@@ -81,29 +88,35 @@ async function loadList() {
     }
     list.innerHTML = '';
     for (const item of items) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'item';
+      const row = document.createElement('div');
+      row.className = 'item';
       const desc = item.description
         ? `<span class="item-desc">${escapeHtml(item.description)}</span>`
         : '';
-      btn.innerHTML = `
-        <span class="item-main">
+      row.innerHTML = `
+        <button type="button" class="item-main item-open">
           <strong>${escapeHtml(item.title)}</strong>
           ${desc}
           <span class="item-desc">${escapeHtml(item.slug)}</span>
-        </span>
+        </button>
         <span class="item-side">
           <span class="item-date">${escapeHtml(item.date || '')}</span>
           <span class="badge ${item.draft ? 'draft' : ''}">${item.draft ? '草稿' : '已发布'}</span>
+          <span class="item-actions">
+            <button type="button" class="btn btn-ghost danger btn-tiny item-delete">删除</button>
+          </span>
         </span>
       `;
-      btn.addEventListener('click', () => {
+      row.querySelector('.item-open').addEventListener('click', () => {
         openEntry(item.slug).catch((err) => {
           alert(`打开失败：${err.message}`);
         });
       });
-      list.appendChild(btn);
+      row.querySelector('.item-delete').addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteEntryBySlug(item.slug);
+      });
+      list.appendChild(row);
     }
   } catch (err) {
     list.innerHTML = `<p class="empty">${escapeHtml(err.message)}</p>`;
@@ -341,20 +354,33 @@ async function saveEntry() {
   }
 }
 
-async function deleteEntry() {
-  if (!state.editingSlug || state.isNew) return;
-  if (!confirm(`确定删除 ${state.editingSlug}.md？`)) return;
+async function deleteEntryBySlug(slug) {
+  if (!slug) return;
+  if (!confirm(`确定删除「${slug}.md」？\n\n只会删本地文件；要从网站去掉，删完后请到页面底部「提交并推送」。`)) {
+    return;
+  }
   setStatus('删除中…');
+  setListStatus('删除中…');
   try {
-    await api(`${state.collectionId}/${encodeURIComponent(state.editingSlug)}`, {
+    await api(`${state.collectionId}/${encodeURIComponent(slug)}`, {
       method: 'DELETE',
     });
-    setStatus('已删除');
+    state.editingSlug = null;
+    state.isNew = false;
     showList();
     await loadList();
+    await loadPublishStatus();
+    setListStatus(`已删除本地 ${state.collectionId}/${slug}.md。请下方填写说明并「提交并推送」，线上才会同步去掉。`);
+    setStatus('');
   } catch (err) {
     setStatus(err.message, true);
+    setListStatus(err.message, true);
   }
+}
+
+async function deleteEntry() {
+  if (!state.editingSlug || state.isNew) return;
+  await deleteEntryBySlug(state.editingSlug);
 }
 
 async function onImageSelected(file) {

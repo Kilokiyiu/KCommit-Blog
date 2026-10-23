@@ -303,7 +303,6 @@ body::before {
   text-align: left;
   font: inherit;
   color: inherit;
-  cursor: pointer;
   background: var(--glass-soft);
   -webkit-backdrop-filter: blur(18px) saturate(1.1);
   backdrop-filter: blur(18px) saturate(1.1);
@@ -319,10 +318,20 @@ body::before {
   border-color: color-mix(in srgb, var(--accent) 30%, var(--glass-border));
 }
 
-.item-main {
+.item-main,
+.item-open {
   display: grid;
   gap: 0.28rem;
   min-width: 0;
+  flex: 1;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
 }
 
 .item-main strong {
@@ -350,6 +359,22 @@ body::before {
   align-items: flex-end;
   gap: 0.35rem;
   margin-top: 0.15rem;
+}
+
+.item-actions {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.btn-tiny {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+}
+
+.list-status {
+  margin: 0 0 0.75rem;
+  min-height: 1.25rem;
 }
 
 .item-date {
