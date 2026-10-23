@@ -10,7 +10,7 @@ export const site = {
   description:
     '基于 Astro 的个人博客主题模板。文章、项目、友链、说说都用本地 Markdown 维护。',
   avatar: '/img/avatar.png',
-  /** 浏览器标签页图标；建议小图，别直接用大头像 */
+  /** 浏览器标签页图标；建议小图*/
   favicon: '/favicon.png',
   /** 全站背景图；换图只需改这里 */
   backgroundImage: '/img/wallpaper/static/img_1.png',
