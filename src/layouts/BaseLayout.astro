@@ -71,12 +71,26 @@ const jsonLdBlocks = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
     <link rel="icon" type="image/png" href={site.favicon} sizes="48x48" />
     <link rel="icon" type="image/png" href="/favicon-32.png" sizes="32x32" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    {/* 仅拉拉丁字重；中文走系统字体，避免 Noto SC 阻塞首屏 */}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700&family=Nunito+Sans:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700&family=Nunito+Sans:wght@400;600&display=swap"
     />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700&family=Nunito+Sans:wght@400;600&display=swap"
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700&family=Nunito+Sans:wght@400;600&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
     <title>{pageTitle}</title>
     <ClientRouter />
 
@@ -96,7 +110,14 @@ const jsonLdBlocks = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
       <button type="button" class="nav-backdrop" data-nav-backdrop aria-label="关闭菜单" tabindex="-1"></button>
       <header class="site-header" id="site-header">
         <a class="brand" href="/">
-          <img class="brand-mark" src={site.avatar} alt="" width="32" height="32" />
+          <img
+            class="brand-mark"
+            src={site.avatar}
+            alt=""
+            width="32"
+            height="32"
+            decoding="async"
+          />
           {site.name}
         </a>
         <button

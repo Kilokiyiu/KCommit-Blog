@@ -154,10 +154,15 @@ export const site = {
   ],
   /**
    * Giscus 评论（GitHub Discussions）。
-   * 新仓库建好后去 https://giscus.app 生成配置，填齐并把 enabled 设为 true。
+   * 1) 去 https://giscus.app 生成配置，填齐 repo / repoId / category / categoryId
+   * 2) 把 enabled 设为 true
+   * 3) 若源码仓为私有，另建公开 Discussions 仓；国内建议启用本站 /giscus-proxy 反代
+   *    （functions/giscus-proxy，host 留空即用当前域名 + /giscus-proxy）
    */
   giscus: {
     enabled: false,
+    /** 留空 = location.origin + '/giscus-proxy'；也可填完整反代地址，或直连 'https://giscus.app' */
+    host: '',
     repo: '',
     repoId: '',
     category: '',

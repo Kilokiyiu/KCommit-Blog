@@ -35,4 +35,6 @@ npm run dev
 
 ## 评论
 
-Giscus 默认关闭。到 [giscus.app](https://giscus.app) 生成配置后，填进 `site.ts` 的 `giscus` 并把 `enabled` 设为 `true`。
+Giscus 默认关闭。到 [giscus.app](https://giscus.app) 生成配置后，填进 `site.ts` 的 `giscus`（`repo` / `repoId` / `category` / `categoryId`）并把 `enabled` 设为 `true`。
+
+源码仓若是私有的，另建一个**公开**仓库开 Discussions，把评论挂在那里。国内访问不稳时，可用仓库自带的 Cloudflare `functions/giscus-proxy`（`host` 留空即走当前域名反代）。

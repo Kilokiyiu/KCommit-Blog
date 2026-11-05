@@ -2,6 +2,28 @@
 
 本项目版本记录。根 README 只保留摘要。
 
+## 1.2.0 — 2026-11-05
+
+### 新增
+
+- **Giscus 评论**：文章 / 文档页可挂载；`site.giscus` 填齐后 `enabled: true`
+- **Cloudflare Pages 反代**：`functions/giscus-proxy`、`functions/_next`，国内直连 `giscus.app` 不稳时可走本站代理（`host` 留空即可）
+- **图片压缩脚本**：`scripts/compress-images.mjs`（需本机已装 `sharp`）
+
+### 性能
+
+- 字体：去掉 Google Noto Sans SC，拉丁字体异步加载，中文用系统字体
+- 音乐：冷启动不预拉音频，点播放再设 `src`
+- 轮播：仅首张写入背景，切到再加载其余大图
+- `public/_headers`：`/_astro` 与 `/img` 缓存头
+
+### 说明
+
+- 主题仓库默认仍 `giscus.enabled: false`，不含任何私人 Discussions 配置
+- 源码仓若为私有，请另建公开仓放 Discussions，再在 giscus.app 生成 ID
+
+---
+
 ## 1.1.1 — 2026-10-23
 
 ### 文档

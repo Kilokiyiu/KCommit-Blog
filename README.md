@@ -7,8 +7,8 @@
 目前是基于 [Astro](https://astro.build) 的个人博客**前端**主题：文章、说说、文档、分享、项目、友链星图。  
 当前开箱即用形态是 **纯静态** 站。
 
-**现状**：基本博客展示 + **本机管理端**（写文 / 导入 Markdown / 推送上线）已可用。  
-**路线**：评论（Giscus）上线后，再在本仓库用 **C# / ASP.NET Core** 接后端。
+**现状**：基本博客展示 + **本机管理端** + **Giscus 评论（可配）** + 首屏性能优化已可用。  
+**路线**：再在本仓库用 **C# / ASP.NET Core** 接后端。
 
 > 仓库是可运行示例。正式使用前请自行更改相关配置。  
 > **非商业用途**（禁止商用），详见 [LICENSE](./LICENSE)。
@@ -34,12 +34,12 @@
 | --- | ------- | ----------------------------------------- |
 | 🪐  | 前端      | Astro 5 · 静态输出 · Content Collections（本仓库） |
 | 📝  | 内容（静态期） | `src/content/**` Markdown                 |
-| ⚙️  | 配置      | `src/site.ts`（身份 / 友链 / 歌单；Giscus 预留未启用）  |
+| ⚙️  | 配置      | `src/site.ts`（身份 / 友链 / 歌单 / Giscus）         |
 | 🖼️ | 资源      | `public/img`、`public/music`               |
 | 🔌  | 读取      | `src/lib/api`：当前本地 Markdown；远程切换待后端就绪     |
 | 🛠️ | 管理端     | **已实现**：本机 `admin/`（写文 / 导入 / 推送；勿挂公网）    |
-| 💬  | 评论      | **未上线**（Giscus 配置位已留）                     |
-| #   | 后端      | **后置**：评论与体验就绪后再上 C# / ASP.NET（本仓库）       |
+| 💬  | 评论      | **已接入** Giscus；填 `site.giscus` 后启用；可选 `/giscus-proxy` |
+| #   | 后端      | **后置**：C# / ASP.NET（本仓库）                        |
 
 
 ### 仓库结构（简图）
@@ -47,14 +47,16 @@
 ```
 KCommit-Blog/
 ├── admin/           # 🛠️  本机写稿后台（Node，仅 localhost）
+├── functions/       # ☁️  Cloudflare Pages：Giscus 反代（/giscus-proxy、/_next）
+├── scripts/         # 图压 WebP 等辅助脚本
 ├── src/
 │   ├── content/     # ✍️  Markdown 内容集
-│   ├── site.ts      # ⚙️  站点配置
+│   ├── site.ts      # ⚙️  站点配置（含 giscus）
 │   ├── lib/api/     # 🔌  本地 / 远程读取
 │   ├── pages/       # 路由配置
 │   ├── components/
 │   └── layouts/
-├── public/          # 🖼️  图片、音乐、favicon
+├── public/          # 🖼️  图片、音乐、favicon；`_headers` / `_routes.json`
 ├── docs/            # 📚  开发与接口文档
 ├── astro.config.mjs
 └── package.json
@@ -109,9 +111,9 @@ Windows 可直接双击 **`admin/Start.bat`**（自动打开浏览器；关掉�
 
 | 优先级 | 计划                  | 说明                                                     |
 | --- | ------------------- | ------------------------------------------------------ |
-| P0  | **评论上线**            | 接好 Giscus，文章页可评论                                       |
+| P0  | ~~评论上线~~            | ✅ Giscus 组件 + 可选 Cloudflare 反代；填配置即可开              |
 | P1  | 管理端增强               | `site.ts` 可视化、Markdown 预览等（按需）                         |
-| P1  | 静态体验补全              | 文档 / 示例与评论上线同步                                         |
+| P1  | 静态体验补全              | 示例内容与文档打磨                                               |
 | P2  | **C# / ASP.NET 后端** | 本仓库新增后端工程，实现 [docs/API.md](./docs/API.md)；管理页再对接真实 API |
 | P2  | 写入 / 鉴权             | 后端 CRUD + 登录后，管理页从「改本地文件」迁到服务端                         |
 
@@ -127,6 +129,7 @@ Windows 可直接双击 **`admin/Start.bat`**（自动打开浏览器；关掉�
 
 | 版本    | 日期         | 说明                           |
 | ----- | ---------- | ---------------------------- |
+| 1.2.0 | 2026-11-05 | Giscus 评论（含 CF 反代）、首屏性能优化（字体/音频/轮播） |
 | 1.1.1 | 2026-10-23 | 文档补充：插图约定、域名绑定说明、管理端用法       |
 | 1.1.0 | 2026-10-23 | 本机管理端（写文 / 导入 / 推送）          |
 | 1.0.0 | 2026-10-22 | 初版开源：Astro 静态主题；CF Pages 部署； |
@@ -414,7 +417,7 @@ git push
 - [ ] 示例友链、`src/content/` 里的示例文章 / 文档 / 项目：删掉、改写，或设 `draft: true`
 - [ ] `public/img/` — 头像、封面、项目图、壁纸（路径要和 `site.ts` / frontmatter 一致）
 - [ ] `src/content/` — 换成自己的 Markdown；也可用管理端导入
-- [ ] （可选）打开 Giscus：填 `site.giscus` 并把 `enabled` 设为 `true`
+- [ ] （可选）打开 Giscus：填 `site.giscus` 的 repo / ID，并把 `enabled` 设为 `true`；私有源码仓请另挂公开 Discussions 仓
 - [ ] （可选）`public/music/` 自备音频，并在 `site.playlist` 登记
 - [ ] 确认 `astro.config.mjs` 的 `site` 已是你的最终域名（影响 RSS / Sitemap / OG）
 

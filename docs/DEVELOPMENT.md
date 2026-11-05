@@ -20,9 +20,9 @@ Windows 也可双击 `admin/Start.bat` 启动管理端。
 **本仓库当前 = 静态前端 + 本机管理端**：Astro 5 · Markdown（`marked`）· `@astrojs/rss` / `@astrojs/sitemap` · `admin/`（Node 读写本地文件）。  
 （`.ts` / `.astro` 是前端工程语言，**不是**后端技术选型。）
 
-**近期前端**：评论上线（Giscus）；管理端已可本机写文 / 推送。见 [ROADMAP.md](./ROADMAP.md)。  
+**近期前端**：Giscus 评论可配；管理端可本机写文 / 推送。见 [ROADMAP.md](./ROADMAP.md)。  
 
-**后端（后置）**：评论与体验就绪后，在本仓库新增 C# / ASP.NET Core（如 `backend/`），按 [API.md](./API.md) 提供 REST；前端再配 `PUBLIC_API_BASE_URL`。管理端届时再从「改本地文件」迁到写 API。
+**后端（后置）**：在本仓库新增 C# / ASP.NET Core（如 `backend/`），按 [API.md](./API.md) 提供 REST；前端再配 `PUBLIC_API_BASE_URL`。管理端届时再从「改本地文件」迁到写 API。
 
 ---
 
@@ -71,7 +71,10 @@ Windows 也可双击 `admin/Start.bat` 启动管理端。
 
 ### 评论
 
-`site.giscus`：到 [giscus.app](https://giscus.app) 生成配置 → 填字段 → `enabled: true`。组件：`src/components/Giscus.astro`。
+`site.giscus`：到 [giscus.app](https://giscus.app) 生成配置 → 填 `repo` / `repoId` / `category` / `categoryId` → `enabled: true`。  
+组件：`src/components/Giscus.astro`（文章页、文档页）。  
+
+国内直连不稳时：部署到 Cloudflare Pages 后保留 `functions/giscus-proxy` 与 `functions/_next`，`host` 留空即用 `当前域名/giscus-proxy`。OAuth 登录仍走官方 `giscus.app`。源码仓私有时，Discussions 须挂在**公开**仓库。
 
 ---
 

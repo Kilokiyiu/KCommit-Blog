@@ -12,8 +12,8 @@
   --shadow: 0 14px 36px -18px rgba(28, 42, 46, 0.26);
   --radius: 1.25rem;
   --radius-lg: 1.5rem;
-  --font-display: "Nunito", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --font-body: "Nunito Sans", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-display: "Nunito", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-body: "Nunito Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
   --max: 72rem;
   --ease: cubic-bezier(0.25, 1, 0.5, 1);
   /** 列表卡文字区（标题 + 一行介绍） */
@@ -3541,15 +3541,14 @@ a.tag:hover {
   font-weight: 650;
 }
 
-.giscus-hint {
-  margin: 0 0 1rem;
-  color: var(--muted);
-  font-size: 0.88rem;
-  line-height: 1.45;
+.giscus-host {
+  min-height: 12rem;
 }
 
-.giscus-host {
-  min-height: 4rem;
+.giscus-host .giscus-frame {
+  width: 100%;
+  border: 0;
+  color-scheme: light;
 }
 
 .project-actions {

@@ -1,35 +1,188 @@
 ---
+/**
+ * Giscus：GitHub Discussions 评论。
+ * 不用动态插入 client.js（document.currentScript 为 null，挂载会失败），
+ * 直接按官方 client 逻辑建 iframe；默认走本站 /giscus-proxy 反代。
+ */
 import { site } from '../site';
 
 const g = site.giscus;
 const enabled = Boolean(g?.enabled && g.repo && g.repoId && g.category && g.categoryId);
+
+const cfg = enabled
+  ? {
+      host: g.host || '',
+      repo: g.repo,
+      repoId: g.repoId,
+      category: g.category,
+      categoryId: g.categoryId,
+      mapping: g.mapping ?? 'pathname',
+      strict: g.strict ?? '0',
+      reactionsEnabled: g.reactionsEnabled ?? '1',
+      emitMetadata: g.emitMetadata ?? '0',
+      inputPosition: g.inputPosition ?? 'bottom',
+      theme: g.theme ?? 'noborder_light',
+      lang: g.lang ?? 'zh-CN',
+      loading: g.loading ?? 'lazy',
+    }
+  : null;
 ---
 
 {
-  enabled && (
-    <section class="giscus-section" aria-label="评论">
+  enabled && cfg && (
+    <section class="giscus-section" aria-label="评论" data-giscus-root>
       <h2 class="giscus-heading">评论</h2>
-      <p class="giscus-hint">用 GitHub 账号登录后即可留言。评论存在本站仓库的 Discussions 里。</p>
-      <div class="giscus-host">
-        <script
-          is:inline
-          src="https://giscus.app/client.js"
-          data-repo={g.repo}
-          data-repo-id={g.repoId}
-          data-category={g.category}
-          data-category-id={g.categoryId}
-          data-mapping={g.mapping}
-          data-strict={g.strict}
-          data-reactions-enabled={g.reactionsEnabled}
-          data-emit-metadata={g.emitMetadata}
-          data-input-position={g.inputPosition}
-          data-theme={g.theme}
-          data-lang={g.lang}
-          data-loading={g.loading}
-          crossorigin="anonymous"
-          async
-        />
-      </div>
+      <div class="giscus giscus-host" data-giscus-host></div>
+      <script is:inline define:vars={{ cfg }}>
+        (function () {
+          const WIDGET_ORIGIN = String(cfg.host || location.origin + '/giscus-proxy').replace(
+            /\/$/,
+            '',
+          );
+          let messageOrigin = location.origin;
+          try {
+            messageOrigin = new URL(WIDGET_ORIGIN).origin;
+          } catch (e) {}
+
+          function meta(name, og) {
+            const sel = og
+              ? "meta[property='og:" + name + "'],meta[name='" + name + "']"
+              : "meta[name='" + name + "']";
+            const el = document.querySelector(sel);
+            return el ? el.content : '';
+          }
+
+          function termForMapping(mapping) {
+            const href = location.href;
+            switch (mapping) {
+              case 'url':
+                return href;
+              case 'title':
+                return document.title;
+              case 'og:title':
+                return meta('title', true);
+              default:
+                return location.pathname.length < 2
+                  ? 'index'
+                  : location.pathname.substring(1).replace(/\.\w+$/, '');
+            }
+          }
+
+          function readSession() {
+            const url = new URL(location.href);
+            const fromQuery = url.searchParams.get('giscus') || '';
+            url.searchParams.delete('giscus');
+            url.hash = '';
+            const cleanUrl = url.toString();
+
+            if (fromQuery) {
+              localStorage.setItem('giscus-session', JSON.stringify(fromQuery));
+              history.replaceState(undefined, document.title, cleanUrl);
+              return { session: fromQuery, origin: cleanUrl };
+            }
+
+            const stored = localStorage.getItem('giscus-session');
+            if (!stored) return { session: '', origin: cleanUrl };
+            try {
+              return { session: JSON.parse(stored), origin: cleanUrl };
+            } catch {
+              localStorage.removeItem('giscus-session');
+              return { session: '', origin: cleanUrl };
+            }
+          }
+
+          function ensureCss() {
+            if (document.getElementById('giscus-css')) return;
+            const link = document.createElement('link');
+            link.id = 'giscus-css';
+            link.rel = 'stylesheet';
+            link.href = WIDGET_ORIGIN + '/default.css';
+            document.head.prepend(link);
+          }
+
+          function mountGiscus() {
+            const host = document.querySelector('[data-giscus-host]');
+            if (!host || !cfg) return;
+
+            ensureCss();
+            host.replaceChildren();
+
+            const { session, origin } = readSession();
+            const params = new URLSearchParams({
+              origin,
+              session,
+              theme: cfg.theme,
+              reactionsEnabled: cfg.reactionsEnabled,
+              emitMetadata: cfg.emitMetadata,
+              inputPosition: cfg.inputPosition,
+              repo: cfg.repo,
+              repoId: cfg.repoId,
+              category: cfg.category,
+              categoryId: cfg.categoryId,
+              strict: cfg.strict,
+              description: meta('description', true),
+              backLink: meta('giscus:backlink') || origin,
+              term: termForMapping(cfg.mapping),
+            });
+
+            const langPath = cfg.lang ? '/' + cfg.lang : '';
+            const iframe = document.createElement('iframe');
+            iframe.className = 'giscus-frame giscus-frame--loading';
+            iframe.title = '评论';
+            iframe.scrolling = 'no';
+            iframe.allow = 'clipboard-write';
+            iframe.src = WIDGET_ORIGIN + langPath + '/widget?' + params.toString();
+            if (cfg.loading === 'lazy') iframe.loading = 'lazy';
+            iframe.style.opacity = '0';
+            iframe.addEventListener('load', function () {
+              iframe.style.removeProperty('opacity');
+              iframe.classList.remove('giscus-frame--loading');
+            });
+            host.appendChild(iframe);
+          }
+
+          function onMessage(event) {
+            if (event.origin !== messageOrigin && event.origin !== 'https://giscus.app') return;
+            const data = event.data;
+            if (!data || typeof data !== 'object' || !data.giscus) return;
+
+            const iframe = document.querySelector('iframe.giscus-frame');
+            if (data.giscus.resizeHeight && iframe) {
+              iframe.style.height = data.giscus.resizeHeight + 'px';
+            }
+
+            if (data.giscus.signOut) {
+              localStorage.removeItem('giscus-session');
+              mountGiscus();
+              return;
+            }
+
+            if (data.giscus.error) {
+              const err = data.giscus.error;
+              if (
+                err.includes('Bad credentials') ||
+                err.includes('Invalid state value') ||
+                err.includes('State has expired')
+              ) {
+                if (localStorage.getItem('giscus-session')) {
+                  localStorage.removeItem('giscus-session');
+                  mountGiscus();
+                }
+              }
+            }
+          }
+
+          window.__kiloMountGiscus = mountGiscus;
+          if (!window.__kiloGiscusBound) {
+            window.__kiloGiscusBound = true;
+            window.addEventListener('message', onMessage);
+            document.addEventListener('astro:page-load', function () {
+              window.__kiloMountGiscus?.();
+            });
+          }
+          mountGiscus();
+        })();
+      </script>
     </section>
   )
 }

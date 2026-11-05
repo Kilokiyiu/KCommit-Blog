@@ -174,7 +174,7 @@ Markdown 里的 /img/...     →     磁盘上的 public/img/...
 | `avatar` / `covers` / `bento` | 图片路径 |
 | `friends` | 友链星图数据 |
 | `playlist` | 首页播放器 |
-| `giscus` | 评论（默认 `enabled: false`） |
+| `giscus` | 评论（默认 `enabled: false`；可配 `host` 走本站反代） |
 | `contact.qq` | 可选；空字符串则联系页不显示 QQ |
 
 域名相关另改：`astro.config.mjs` 的 `site`、`public/robots.txt`。

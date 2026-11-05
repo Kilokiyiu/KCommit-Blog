@@ -88,7 +88,7 @@ const playlistJson = JSON.stringify(tracks);
         </div>
       </div>
 
-      <audio data-music-audio preload="metadata"></audio>
+      <audio data-music-audio preload="none"></audio>
     </aside>
   )
 }
@@ -345,10 +345,17 @@ const playlistJson = JSON.stringify(tracks);
       }
     };
 
+    const ensureSrc = () => {
+      const track = tracks[index];
+      const next = encodeURI(track.src);
+      if (audio.getAttribute('src') !== next) {
+        audio.src = next;
+      }
+    };
+
     const loadTrack = (i: number, autoplay = false) => {
       index = (i + tracks.length) % tracks.length;
       const track = tracks[index];
-      audio.src = encodeURI(track.src);
       if (titleEl) titleEl.textContent = track.title;
       if (artistEl) artistEl.textContent = track.artist;
       seek.value = '0';
@@ -357,8 +364,12 @@ const playlistJson = JSON.stringify(tracks);
       if (durationEl) durationEl.textContent = '0:00';
       requestAnimationFrame(syncTitleOverflow);
       if (autoplay) {
+        ensureSrc();
         void audio.play().then(() => setPlayingUi(true)).catch(() => setPlayingUi(false));
       } else {
+        // 冷启动只更新文案，不拉音频，等用户点播放再设 src
+        audio.removeAttribute('src');
+        audio.load();
         setPlayingUi(false);
       }
     };
@@ -366,6 +377,7 @@ const playlistJson = JSON.stringify(tracks);
     toggle.addEventListener('click', () => {
       bumpActivity();
       if (audio.paused) {
+        ensureSrc();
         void audio.play().then(() => setPlayingUi(true)).catch(() => setPlayingUi(false));
       } else {
         audio.pause();
@@ -376,6 +388,7 @@ const playlistJson = JSON.stringify(tracks);
     prev?.addEventListener('click', () => {
       bumpActivity();
       if (tracks.length < 2) {
+        ensureSrc();
         audio.currentTime = 0;
         void audio.play().then(() => setPlayingUi(true)).catch(() => setPlayingUi(false));
         return;
@@ -385,6 +398,7 @@ const playlistJson = JSON.stringify(tracks);
     next?.addEventListener('click', () => {
       bumpActivity();
       if (tracks.length < 2) {
+        ensureSrc();
         audio.currentTime = 0;
         void audio.play().then(() => setPlayingUi(true)).catch(() => setPlayingUi(false));
         return;

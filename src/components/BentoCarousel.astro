@@ -53,7 +53,9 @@ const safeSlides = slides.filter((s) => s.type === 'blessing' || Boolean(s.image
           ]
             .filter(Boolean)
             .join(' ');
-          const style = slide.image ? `--slide-image: url('${slide.image}')` : undefined;
+          // 仅首张写入 CSS 背景，其余由脚本按需加载，避免一次拉齐所有大图
+          const style =
+            slide.image && i === 0 ? `--slide-image: url('${slide.image}')` : undefined;
           const external = Boolean(slide.href?.startsWith('http'));
 
           const editorWish = slide.text ?? '预祝：代码跑通无 BUG !!。';
@@ -111,6 +113,7 @@ const safeSlides = slides.filter((s) => s.type === 'blessing' || Boolean(s.image
               rel={external ? 'noopener noreferrer' : undefined}
               style={style}
               data-slide
+              data-slide-image={slide.image}
               aria-hidden={i === 0 ? 'false' : 'true'}
               tabindex={i === 0 ? 0 : -1}
               aria-label={
@@ -122,7 +125,13 @@ const safeSlides = slides.filter((s) => s.type === 'blessing' || Boolean(s.image
               {inner}
             </a>
           ) : (
-            <div class={className} style={style} data-slide aria-hidden={i === 0 ? 'false' : 'true'}>
+            <div
+              class={className}
+              style={style}
+              data-slide
+              data-slide-image={slide.image}
+              aria-hidden={i === 0 ? 'false' : 'true'}
+            >
               {inner}
             </div>
           );
@@ -181,10 +190,17 @@ const safeSlides = slides.filter((s) => s.type === 'blessing' || Boolean(s.image
     let index = 0;
     let timer: number | undefined;
 
+    const ensureSlideImage = (slide: HTMLElement) => {
+      const src = slide.dataset.slideImage;
+      if (!src || slide.style.getPropertyValue('--slide-image')) return;
+      slide.style.setProperty('--slide-image', `url('${src}')`);
+    };
+
     const show = (next: number) => {
       index = (next + slides.length) % slides.length;
       slides.forEach((slide, i) => {
         const on = i === index;
+        if (on) ensureSlideImage(slide);
         slide.classList.toggle('is-active', on);
         slide.setAttribute('aria-hidden', on ? 'false' : 'true');
         if ('tabIndex' in slide) slide.tabIndex = on ? 0 : -1;
